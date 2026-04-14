@@ -62,17 +62,23 @@ app.get("/start-game", async (req,res)=>{
 
     // 🔥 STEP 2: GAME LAUNCH
     const response = await axios.post(
-      "https://game.gamblly-api.com/v1/gameLaunch.php",
-      {
-        member_account: userId,
-        game_uid: "a990de177577a2e6a889aaac5f57b429",
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-        currency_code: "INR",
-        language: "en",
-        platform: 2,
-        home_url: "https://2xwin.online"
-      }
-    );
+  "https://portal.gamblly-api.com/v1/gameLaunch.php",
+  {
+    member_account: userId,
+    game_uid: "a990de177577a2e6a889aaac5f57b429",
+    api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+    currency_code: "INR",
+    language: "en",
+    platform: 2,
+    home_url: "https://2xwin.online",
+
+    // 🔥 WALLET SYNC
+    credit_amount: balance.toString(),
+
+    // 🔥 IMPORTANT
+    transfer_id: Date.now().toString()
+  }
+);
 
     const gameUrl = response.data.payload.game_launch_url;
 
