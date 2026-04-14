@@ -22,13 +22,14 @@ app.get("/", (req,res)=>{
 });
 
 
-// 🔥 GAME LAUNCH
+// 🔥 GAME LAUNCH (MULTI GAME)
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
+  const gameId = req.query.gameId; // 🔥 NEW
 
-  if(!userId){
-    return res.json({ error: "userId missing" });
+  if(!userId || !gameId){
+    return res.json({ error: "Missing userId or gameId" });
   }
 
   try{
@@ -46,9 +47,11 @@ app.get("/start-game", async (req,res)=>{
 
     let balance = Number(data.balance || 0);
 
-    // 🔥 AUTO USERNAME FIX (OLD USERS)
+    // 🔥 AUTO USERNAME FIX
     if(!data.username){
-      const autoUsername = data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
+      const autoUsername =
+        data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
+
       await doc.ref.update({ username: autoUsername });
       data.username = autoUsername;
 
@@ -59,15 +62,16 @@ app.get("/start-game", async (req,res)=>{
 
     console.log("🔥 FINAL REQUEST:", {
       member_account: username,
-      balance
+      balance,
+      gameId
     });
 
-    // 🔥 API CALL (V1)
+    // 🔥 API CALL (DYNAMIC GAME)
     const response = await axios.post(
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
         member_account: username,
-        game_uid: "a990de177577a2e6a889aaac5f57b429",
+        game_uid: gameId, // 🔥 MAIN CHANGE
         api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         currency_code: "INR",
         language: "en",
@@ -112,7 +116,7 @@ app.post("/callback", async (req, res) => {
 
     const data = req.body;
 
-    const username = data.player_uid; // 🔥 IMPORTANT FIX
+    const username = data.player_uid; // 🔥 FIXED
     const action = data.action;
 
     const betAmount = Number(data.bet_amount || 0);
