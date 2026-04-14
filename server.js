@@ -50,7 +50,7 @@ snapshot.forEach(doc=>{
     home_url: "https://2xwin.online",
 
     // 🔥 ADD THIS
-    credit_amount: balance
+    credit_amount: balance.toString()
   }
 );
 
