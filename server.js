@@ -24,10 +24,11 @@ app.get("/start-game", async (req,res)=>{
     res.json(response.data);
 
   catch(e){
-  console.log(e.response?.data); // 🔥 asli error dikhega
+  console.log("FULL ERROR:", e.response?.data || e.message);
+
   res.json({
     error:"Game launch failed",
-    details: e.response?.data
+    details: e.response?.data || e.message
   });
   }
 
