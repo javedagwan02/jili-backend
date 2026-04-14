@@ -4,26 +4,33 @@ const cors = require("cors");
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
-// ✅ TEST
+// TEST
 app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-// ✅ JILI GAME LAUNCH
+// JILI GAME
 app.get("/start-game", async (req,res)=>{
+
+  const userId = req.query.userId || "12345";
 
   try{
 
-    const response = await axios.post("https://api.gamblly-api.com/launch", {
-      apiKey: "234d9bfc3c5CodeHub94045e3c0b1515",
-      userId: "12345",
-      game: "jili"
-    });
+    const response = await axios.post(
+      "https://al.gamblly-api.com/b24d2/game/launch", // 🔥 suffix use hua
+      {
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf", // 🔥 teri real key
+        user_id: userId,
+        game_code: "fortune_gems" // test game
+      }
+    );
 
     res.json(response.data);
 
-  }catch(e){   // ✅ yahan bracket fix
+  }catch(e){
+
     console.log("FULL ERROR:", e.response?.data || e.message);
 
     res.json({
