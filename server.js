@@ -6,26 +6,28 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// TEST
+// ✅ TEST ROUTE
 app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-// GAME LAUNCH
+// ✅ GAME LAUNCH ROUTE
 app.get("/start-game", async (req,res)=>{
 
-  const userId = req.query.userId || "user123";
+  const userId = req.query.userId || "12345";
 
   try{
 
     const response = await axios.post(
-      "https://game.gamblly-api.com/production/v1/gameLaunch.php", // ✅ FINAL URL
+      "https://game.gamblly-api.com/production/v2/gameLaunch.php",
       {
         member_account: userId,
-        game_uid: "fortune_gems", // 👉 game catalog se lena
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-        home_url: "https://2xwin.online",
-        platform: 2
+        game_uid: "57b429", // ✅ Fortune Gems
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a", // ✅ tera API key
+        currency_code: "INR",
+        language: "en",
+        platform: 2,
+        home_url: "https://2xwin.online"
       }
     );
 
@@ -43,6 +45,7 @@ app.get("/start-game", async (req,res)=>{
 
 });
 
+// ✅ SERVER START
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, ()=>{
