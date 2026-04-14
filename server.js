@@ -39,17 +39,20 @@ snapshot.forEach(doc=>{
 });
 
     const response = await axios.post(
-      "https://game.gamblly-api.com/v1/gameLaunch.php",
-      {
-        member_account: userId,
-        game_uid: "a990de177577a2e6a889aaac5f57b429",
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-        currency_code: "INR",
-        language: "en",
-        platform: 2,
-        home_url: "https://2xwin.online"
-      }
-    );
+  "https://game.gamblly-api.com/v1/gameLaunch.php",
+  {
+    member_account: userId,
+    game_uid: "a990de177577a2e6a889aaac5f57b429",
+    api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+    currency_code: "INR",
+    language: "en",
+    platform: 2,
+    home_url: "https://2xwin.online",
+
+    // 🔥 ADD THIS
+    credit_amount: balance
+  }
+);
 
     const gameUrl = response.data.payload.game_launch_url;
 
@@ -88,34 +91,34 @@ app.post("/callback", async (req, res) => {
 
   let newBalance = 0;
 
-  snapshot.forEach(async (doc) => {
+  if(snapshot.empty){
+    return res.json({ status:false });
+  }
 
-    let balance = doc.data().balance || 0;
+  const doc = snapshot.docs[0];
 
-    if(action === "bet"){
-      balance -= betAmount;
-      console.log("❌ BET:", betAmount);
-    }
+  let balance = Number(doc.data().balance || 0);
 
-    if(action === "win"){
-      balance += winAmount;
-      console.log("✅ WIN:", winAmount);
-    }
+  if(action === "bet"){
+    balance -= betAmount;
+    console.log("❌ BET:", betAmount);
+  }
 
-    newBalance = balance;
+  if(action === "win"){
+    balance += winAmount;
+    console.log("✅ WIN:", winAmount);
+  }
 
-    await doc.ref.update({ balance });
+  newBalance = balance;
 
-  });
+  await doc.ref.update({ balance });
 
-  // 🔥 IMPORTANT RESPONSE
   res.json({
     status: true,
     balance: newBalance
   });
 
 });
-
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
