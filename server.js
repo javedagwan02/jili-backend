@@ -76,17 +76,14 @@ app.get("/start-game", async (req,res)=>{
 
     console.log("🔥 API RESPONSE:", response.data);
 
-    const gameUrl = response.data?.payload?.game_launch_url;
+const gameUrl = response.data?.game_url;
 
-    if(!gameUrl){
-      console.log("❌ FULL RESPONSE:", response.data);
-      return res.json({
-        error: "Game URL not received",
-        data: response.data
-      });
-    }
+if (!gameUrl) {
+  console.log("❌ FULL RESPONSE:", response.data);
+  return res.json({ error: "Game URL not received", data: response.data });
+}
 
-    res.redirect(gameUrl);
+res.redirect(gameUrl);
 
   }catch(e){
 
