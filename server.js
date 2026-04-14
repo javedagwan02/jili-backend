@@ -51,6 +51,7 @@ snapshot.forEach(doc=>{
 
     // 🔥 ADD THIS
     credit_amount: balance.toString()
+    transfer_id: Date.now().toString()
   }
 );
 
