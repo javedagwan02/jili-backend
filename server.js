@@ -37,7 +37,7 @@ let balance = 0;
 snapshot.forEach(doc=>{
   balance = Number(doc.data().balance || 0);
 });
-
+console.log("BALANCE SENT:", balance);
     const response = await axios.post(
   "https://game.gamblly-api.com/v1/gameLaunch.php",
   {
