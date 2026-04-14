@@ -28,9 +28,18 @@ app.get("/start-game", async (req,res)=>{
   const userId = req.query.userId || "12345";
 
   try{
+    const snapshot = await db.collection("users")
+.where("email","==",userId)
+.get();
+
+let balance = 0;
+
+snapshot.forEach(doc=>{
+  balance = Number(doc.data().balance || 0);
+});
 
     const response = await axios.post(
-      "https://game.gamblly-api.com/production/v2/gameLaunch.php",
+      "https://game.gamblly-api.com/v1/gameLaunch.php",
       {
         member_account: userId,
         game_uid: "a990de177577a2e6a889aaac5f57b429",
@@ -63,56 +72,47 @@ app.get("/start-game", async (req,res)=>{
 // 🔥 CALLBACK (WALLET UPDATE)
 app.post("/callback", async (req, res) => {
 
-  console.log("🔥 CALLBACK AAYA:", req.body);
+  console.log("🔥 CALLBACK:", req.body);
 
   const data = req.body;
 
-  try {
+  const userEmail = data.player_uid;
+  const action = data.action;
 
-    const userEmail = data.member_account;
-    const amount = Number(data.amount || 0);
+  const betAmount = Number(data.bet_amount || 0);
+  const winAmount = Number(data.win_amount || 0);
 
-    // 🔍 USER FIND FIREBASE
-    const snapshot = await db.collection("users")
-      .where("email","==",userEmail)
-      .get();
+  const snapshot = await db.collection("users")
+    .where("email","==",userEmail)
+    .get();
 
-    if(snapshot.empty){
-      console.log("❌ USER NOT FOUND:", userEmail);
-      return res.json({ status: "user_not_found" });
+  let newBalance = 0;
+
+  snapshot.forEach(async (doc) => {
+
+    let balance = doc.data().balance || 0;
+
+    if(action === "bet"){
+      balance -= betAmount;
+      console.log("❌ BET:", betAmount);
     }
 
-    snapshot.forEach(async (doc) => {
+    if(action === "win"){
+      balance += winAmount;
+      console.log("✅ WIN:", winAmount);
+    }
 
-      let balance = doc.data().balance || 0;
+    newBalance = balance;
 
-      // ❌ BET → MINUS
-      if(data.type === "bet"){
-        balance -= amount;
-        console.log("❌ BET:", amount);
-      }
+    await doc.ref.update({ balance });
 
-      // ✅ WIN → ADD
-      if(data.type === "win"){
-        balance += amount;
-        console.log("✅ WIN:", amount);
-      }
+  });
 
-      await doc.ref.update({ balance });
-
-      console.log("💰 UPDATED BALANCE:", balance);
-
-    });
-
-    res.json({ status: "success" });
-
-  } catch (e) {
-
-    console.log("❌ CALLBACK ERROR:", e.message);
-
-    res.json({ status: "error" });
-
-  }
+  // 🔥 IMPORTANT RESPONSE
+  res.json({
+    status: true,
+    balance: newBalance
+  });
 
 });
 
