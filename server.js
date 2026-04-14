@@ -11,19 +11,21 @@ app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-// JILI GAME
+// GAME LAUNCH
 app.get("/start-game", async (req,res)=>{
 
-  const userId = req.query.userId || "12345";
+  const userId = req.query.userId || "user123";
 
   try{
 
     const response = await axios.post(
-      "https://al.gamblly-api.com/b24d2/game/launch", // 🔥 suffix use hua
+      "https://gamblly-api.com/v1/gameLaunch.php", // ✅ correct endpoint (try this)
       {
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a", // 🔥 teri real key
-        user_id: userId,
-        game_code: "fortune_gems" // test game
+        member_account: userId,
+        game_uid: "fortune_gems", // 👉 game catalog se lena
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        home_url: "https://2xwin.online",
+        platform: 2
       }
     );
 
