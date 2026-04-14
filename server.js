@@ -23,11 +23,13 @@ app.get("/start-game", async (req,res)=>{
 
     res.json(response.data);
 
-  }catch(e){
-    res.json({error:"Game launch failed"});
+  catch(e){
+  console.log(e.response?.data); // 🔥 asli error dikhega
+  res.json({
+    error:"Game launch failed",
+    details: e.response?.data
+  });
   }
-
-});
 
 const PORT = process.env.PORT || 3000;
 
