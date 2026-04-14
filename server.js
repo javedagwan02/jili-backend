@@ -48,8 +48,8 @@ app.get("/start-game", async (req,res)=>{
     console.log("💰 USER BALANCE:", balance);
 
     // ✅ ONLY V1 API
-    const response = await axios.post(
-  "https://game.gamblly-api.com/production/b24d2/v1/gameLaunch.php",
+const response = await axios.post(
+  "https://game.gamblly-api.com/production/v1/gameLaunch.php",
   {
     member_account: userId,
     game_uid: "a990de177577a2e6a889aaac5f57b429",
