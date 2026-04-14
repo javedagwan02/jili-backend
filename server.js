@@ -22,7 +22,7 @@ app.get("/start-game", async (req,res)=>{
       "https://game.gamblly-api.com/production/v2/gameLaunch.php",
       {
         member_account: userId,
-        game_uid: "57b429", // ✅ Fortune Gems
+        game_uid: "a990de177577a2e6a889aaac5f57b429", // ✅ Fortune Gems
         api_key: "fecfaa08d7aCodeHub944b04ac2cf59a", // ✅ tera API key
         currency_code: "INR",
         language: "en",
