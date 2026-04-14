@@ -47,19 +47,26 @@ let balance = Number(doc.data().balance || 0);
 
 // 🔥 ADD THIS
 const username = doc.data().username;
-
+console.log("🔥 FINAL REQUEST:", {
+  member_account: username,
+  balance
+});
 const response = await axios.post(
   "https://game.gamblly-api.com/production/v1/gameLaunch.php",
   {
-    member_account: username, // ✅ FIX
+    member_account: username,
     game_uid: "a990de177577a2e6a889aaac5f57b429",
     api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
     currency_code: "INR",
     language: "en",
     platform: 2,
-    home_url: "https://2xwin.online"
+    home_url: "https://2xwin.online",
+
+    // 🔥 ADD BACK THIS
+    credit_amount: balance.toString(),
+    transfer_id: Date.now().toString()
   }
-); 
+);
 console.log("🔥 API RESPONSE:", response.data);
 
 const gameUrl = response.data?.payload?.game_launch_url;
