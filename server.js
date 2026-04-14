@@ -16,14 +16,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
 // ✅ TEST ROUTE
 app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-
-// 🔥 GAME LAUNCH WITH TRANSFER WALLET
+// 🔥 GAME LAUNCH
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
@@ -42,42 +40,54 @@ app.get("/start-game", async (req,res)=>{
       return res.json({ error: "User not found" });
     }
 
-   const doc = snapshot.docs[0];
-let balance = Number(doc.data().balance || 0);
+    const doc = snapshot.docs[0];
+    const data = doc.data();
 
-// 🔥 ADD THIS
-const username = doc.data().username;
-console.log("🔥 FINAL REQUEST:", {
-  member_account: username,
-  balance
-});
-const response = await axios.post(
-  "https://game.gamblly-api.com/production/v1/gameLaunch.php",
-  {
-    member_account: username,
-    game_uid: "a990de177577a2e6a889aaac5f57b429",
-    api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-    currency_code: "INR",
-    language: "en",
-    platform: 2,
-    home_url: "https://2xwin.online",
+    let balance = Number(data.balance || 0);
+    const username = data.username;
 
-    // 🔥 ADD BACK THIS
-    credit_amount: balance.toString(),
-    transfer_id: Date.now().toString()
-  }
-);
-console.log("🔥 API RESPONSE:", response.data);
+    // 🔥 CHECK USERNAME
+    if(!username){
+      return res.json({ error: "Username missing in Firebase" });
+    }
 
-const gameUrl = response.data?.payload?.game_launch_url;
+    // 🔥 DEBUG
+    console.log("🔥 FINAL REQUEST:", {
+      member_account: username,
+      balance
+    });
 
-if (!gameUrl) {
-  console.log("❌ FULL RESPONSE:", response.data);
-  return res.json({ error: "Game URL not received", data: response.data });
-}
+    // 🔥 API CALL
+    const response = await axios.post(
+      "https://game.gamblly-api.com/production/v1/gameLaunch.php",
+      {
+        member_account: username,
+        game_uid: "a990de177577a2e6a889aaac5f57b429",
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        currency_code: "INR",
+        language: "en",
+        platform: 1, // 🔥 FIXED
+        home_url: "https://2xwin.online",
 
-res.redirect(gameUrl);
-    
+        credit_amount: balance.toString(),
+        transfer_id: Date.now().toString()
+      }
+    );
+
+    console.log("🔥 API RESPONSE:", response.data);
+
+    const gameUrl = response.data?.payload?.game_launch_url;
+
+    if(!gameUrl){
+      console.log("❌ FULL RESPONSE:", response.data);
+      return res.json({
+        error: "Game URL not received",
+        data: response.data
+      });
+    }
+
+    res.redirect(gameUrl);
+
   }catch(e){
 
     console.log("❌ ERROR:", e.response?.data || e.message);
@@ -90,8 +100,7 @@ res.redirect(gameUrl);
 
 });
 
-
-// 🔥 CALLBACK (BET / WIN SYNC)
+// 🔥 CALLBACK (BET / WIN)
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK:", req.body);
@@ -117,16 +126,12 @@ app.post("/callback", async (req, res) => {
     const doc = snapshot.docs[0];
     let balance = Number(doc.data().balance || 0);
 
-    // 🔻 BET
     if(action === "bet"){
       balance -= betAmount;
-      console.log("❌ BET:", betAmount);
     }
 
-    // 🔺 WIN
     if(action === "win"){
       balance += winAmount;
-      console.log("✅ WIN:", winAmount);
     }
 
     await doc.ref.update({ balance });
@@ -145,7 +150,6 @@ app.post("/callback", async (req, res) => {
   }
 
 });
-
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
