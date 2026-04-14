@@ -58,8 +58,6 @@ const response = await axios.post(
     language: "en",
     platform: 2,
     home_url: "https://2xwin.online",
-    credit_amount: balance.toString(),
-    transfer_id: Date.now().toString()
   }
 );
 console.log("🔥 API RESPONSE:", response.data);
