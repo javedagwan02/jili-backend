@@ -21,6 +21,7 @@ app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
+
 // 🔥 GAME LAUNCH
 app.get("/start-game", async (req,res)=>{
 
@@ -41,23 +42,27 @@ app.get("/start-game", async (req,res)=>{
     }
 
     const doc = snapshot.docs[0];
-    const data = doc.data();
+    let data = doc.data();
 
     let balance = Number(data.balance || 0);
-    const username = data.username;
 
-    // 🔥 CHECK USERNAME
-    if(!username){
-      return res.json({ error: "Username missing in Firebase" });
+    // 🔥 AUTO USERNAME FIX (OLD USERS)
+    if(!data.username){
+      const autoUsername = data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
+      await doc.ref.update({ username: autoUsername });
+      data.username = autoUsername;
+
+      console.log("⚡ Auto username created:", autoUsername);
     }
 
-    // 🔥 DEBUG
+    const username = data.username;
+
     console.log("🔥 FINAL REQUEST:", {
       member_account: username,
       balance
     });
 
-    // 🔥 API CALL
+    // 🔥 API CALL (V1)
     const response = await axios.post(
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
@@ -66,7 +71,7 @@ app.get("/start-game", async (req,res)=>{
         api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         currency_code: "INR",
         language: "en",
-        platform: 1, // 🔥 FIXED
+        platform: 1,
         home_url: "https://2xwin.online",
 
         credit_amount: balance.toString(),
@@ -76,14 +81,14 @@ app.get("/start-game", async (req,res)=>{
 
     console.log("🔥 API RESPONSE:", response.data);
 
-const gameUrl = response.data?.game_url;
+    const gameUrl = response.data?.game_url;
 
-if (!gameUrl) {
-  console.log("❌ FULL RESPONSE:", response.data);
-  return res.json({ error: "Game URL not received", data: response.data });
-}
+    if (!gameUrl) {
+      console.log("❌ FULL RESPONSE:", response.data);
+      return res.json({ error: "Game URL not received", data: response.data });
+    }
 
-res.redirect(gameUrl);
+    res.redirect(gameUrl);
 
   }catch(e){
 
@@ -97,6 +102,7 @@ res.redirect(gameUrl);
 
 });
 
+
 // 🔥 CALLBACK (BET / WIN)
 app.post("/callback", async (req, res) => {
 
@@ -106,14 +112,14 @@ app.post("/callback", async (req, res) => {
 
     const data = req.body;
 
-    const userEmail = data.player_uid;
+    const username = data.player_uid; // 🔥 IMPORTANT FIX
     const action = data.action;
 
     const betAmount = Number(data.bet_amount || 0);
     const winAmount = Number(data.win_amount || 0);
 
     const snapshot = await db.collection("users")
-      .where("email","==",userEmail)
+      .where("username","==",username) // 🔥 FIXED
       .get();
 
     if(snapshot.empty){
@@ -147,6 +153,7 @@ app.post("/callback", async (req, res) => {
   }
 
 });
+
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
