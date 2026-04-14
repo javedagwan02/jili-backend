@@ -19,7 +19,7 @@ app.get("/start-game", async (req,res)=>{
   try{
 
     const response = await axios.post(
-      "https://gamblly-api.com/v1/gameLaunch.php", // ✅ correct endpoint (try this)
+      "https://game.gamblly-api.com/production/v1/gameLaunch.php", // ✅ FINAL URL
       {
         member_account: userId,
         game_uid: "fortune_gems", // 👉 game catalog se lena
