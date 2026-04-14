@@ -32,12 +32,12 @@ app.get("/start-game", async (req,res)=>{
 
     const gameUrl = response.data.payload.game_launch_url;
 
-    // 🔥 DIRECT GAME OPEN
+    // 🔥 DIRECT OPEN
     res.redirect(gameUrl);
 
   }catch(e){
 
-    console.log("FULL ERROR:", e.response?.data || e.message);
+    console.log("ERROR:", e.response?.data || e.message);
 
     res.json({
       error:"Game launch failed",
