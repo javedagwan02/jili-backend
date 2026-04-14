@@ -16,7 +16,7 @@ app.get("/start-game", async (req,res)=>{
   try{
 
     const response = await axios.post("https://api.gamblly-api.com/launch", {
-      apiKey: "APNI_API_KEY_YHA_DAL",
+      apiKey: "234d9bfc3c5CodeHub94045e3c0b1515",
       userId: "12345",
       game: "jili"
     });
