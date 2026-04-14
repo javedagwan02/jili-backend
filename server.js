@@ -65,17 +65,16 @@ app.get("/start-game", async (req,res)=>{
         transfer_id: Date.now().toString()
       }
     );
+console.log("🔥 API RESPONSE:", response.data);
 
-    console.log("🔥 API RESPONSE:", response.data);
+const gameUrl = response.data?.game_url;
 
-    const gameUrl = response.data?.payload?.game_launch_url;
+if(!gameUrl){
+  return res.json({ error: "Game URL not received", data: response.data });
+}
 
-    if(!gameUrl){
-      return res.json({ error: "Game URL not received", data: response.data });
-    }
-
-    res.redirect(gameUrl);
-
+res.redirect(gameUrl);
+    
   }catch(e){
 
     console.log("❌ ERROR:", e.response?.data || e.message);
