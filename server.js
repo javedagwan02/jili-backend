@@ -34,7 +34,6 @@ app.get("/start-game", async (req,res)=>{
 
   try{
 
-    // 🔥 FIREBASE SE BALANCE
     const snapshot = await db.collection("users")
       .where("email","==",userId)
       .get();
@@ -48,41 +47,33 @@ app.get("/start-game", async (req,res)=>{
 
     console.log("💰 USER BALANCE:", balance);
 
-    // 🔥 STEP 1: TRANSFER WALLET
-    const transferRes = await axios.post(
-      "https://game.gamblly-api.com/v2/transfer",
+    // ✅ ONLY V1 API
+    const response = await axios.post(
+      "https://game.gamblly-api.com/v1/gameLaunch.php",
       {
         member_account: userId,
-        amount: balance,
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a"
+        game_uid: "a990de177577a2e6a889aaac5f57b429",
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        currency_code: "INR",
+        language: "en",
+        platform: 2,
+        home_url: "https://2xwin.online",
+
+        // 🔥 WALLET SYNC
+        credit_amount: balance.toString(),
+
+        transfer_id: Date.now().toString()
       }
     );
 
-    console.log("✅ TRANSFER RESPONSE:", transferRes.data);
+    console.log("🔥 API RESPONSE:", response.data);
 
-    // 🔥 STEP 2: GAME LAUNCH
-    const response = await axios.post(
-  "https://portal.gamblly-api.com/v1/gameLaunch.php",
-  {
-    member_account: userId,
-    game_uid: "a990de177577a2e6a889aaac5f57b429",
-    api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-    currency_code: "INR",
-    language: "en",
-    platform: 2,
-    home_url: "https://2xwin.online",
+    const gameUrl = response.data?.payload?.game_launch_url;
 
-    // 🔥 WALLET SYNC
-    credit_amount: balance.toString(),
+    if(!gameUrl){
+      return res.json({ error: "Game URL not received", data: response.data });
+    }
 
-    // 🔥 IMPORTANT
-    transfer_id: Date.now().toString()
-  }
-);
-
-    const gameUrl = response.data.payload.game_launch_url;
-
-    // 🔥 GAME OPEN
     res.redirect(gameUrl);
 
   }catch(e){
