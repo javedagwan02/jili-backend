@@ -21,7 +21,7 @@ app.get("/start-game", async (req,res)=>{
     const response = await axios.post(
       "https://al.gamblly-api.com/b24d2/game/launch", // 🔥 suffix use hua
       {
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf", // 🔥 teri real key
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a", // 🔥 teri real key
         user_id: userId,
         game_code: "fortune_gems" // test game
       }
