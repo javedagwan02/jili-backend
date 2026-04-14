@@ -42,24 +42,24 @@ app.get("/start-game", async (req,res)=>{
       return res.json({ error: "User not found" });
     }
 
-    const doc = snapshot.docs[0];
-    let balance = Number(doc.data().balance || 0);
+   const doc = snapshot.docs[0];
+let balance = Number(doc.data().balance || 0);
 
-    console.log("💰 USER BALANCE:", balance);
+// 🔥 ADD THIS
+const username = doc.data().username;
 
-    // ✅ ONLY V1 API
 const response = await axios.post(
   "https://game.gamblly-api.com/production/v1/gameLaunch.php",
   {
-    member_account: userId.replace(/[^a-zA-Z0-9]/g, "")
+    member_account: username, // ✅ FIX
     game_uid: "a990de177577a2e6a889aaac5f57b429",
     api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
     currency_code: "INR",
     language: "en",
     platform: 2,
-    home_url: "https://2xwin.online",
+    home_url: "https://2xwin.online"
   }
-);
+); 
 console.log("🔥 API RESPONSE:", response.data);
 
 const gameUrl = response.data?.payload?.game_launch_url;
