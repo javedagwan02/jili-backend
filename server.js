@@ -2,6 +2,16 @@ const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
 
+// 🔥 FIREBASE ADMIN
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccountKey.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -11,6 +21,8 @@ app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
+
+// ✅ GAME LAUNCH
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId || "12345";
@@ -32,7 +44,7 @@ app.get("/start-game", async (req,res)=>{
 
     const gameUrl = response.data.payload.game_launch_url;
 
-    // 🔥 DIRECT OPEN
+    // 🔥 DIRECT GAME OPEN
     res.redirect(gameUrl);
 
   }catch(e){
@@ -47,9 +59,67 @@ app.get("/start-game", async (req,res)=>{
 
 });
 
+
+// 🔥 CALLBACK (WALLET UPDATE)
+app.post("/callback", async (req, res) => {
+
+  console.log("🔥 CALLBACK AAYA:", req.body);
+
+  const data = req.body;
+
+  try {
+
+    const userEmail = data.member_account;
+    const amount = Number(data.amount || 0);
+
+    // 🔍 USER FIND FIREBASE
+    const snapshot = await db.collection("users")
+      .where("email","==",userEmail)
+      .get();
+
+    if(snapshot.empty){
+      console.log("❌ USER NOT FOUND:", userEmail);
+      return res.json({ status: "user_not_found" });
+    }
+
+    snapshot.forEach(async (doc) => {
+
+      let balance = doc.data().balance || 0;
+
+      // ❌ BET → MINUS
+      if(data.type === "bet"){
+        balance -= amount;
+        console.log("❌ BET:", amount);
+      }
+
+      // ✅ WIN → ADD
+      if(data.type === "win"){
+        balance += amount;
+        console.log("✅ WIN:", amount);
+      }
+
+      await doc.ref.update({ balance });
+
+      console.log("💰 UPDATED BALANCE:", balance);
+
+    });
+
+    res.json({ status: "success" });
+
+  } catch (e) {
+
+    console.log("❌ CALLBACK ERROR:", e.message);
+
+    res.json({ status: "error" });
+
+  }
+
+});
+
+
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, ()=>{
-  console.log("Server started on port " + PORT);
+  console.log("🚀 Server started on port " + PORT);
 });
