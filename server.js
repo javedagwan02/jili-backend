@@ -64,9 +64,10 @@ app.get("/start-game", async (req,res)=>{
 );
 console.log("🔥 API RESPONSE:", response.data);
 
-const gameUrl = response.data?.game_url;
+const gameUrl = response.data?.payload?.game_launch_url;
 
-if(!gameUrl){
+if (!gameUrl) {
+  console.log("❌ FULL RESPONSE:", response.data);
   return res.json({ error: "Game URL not received", data: response.data });
 }
 
