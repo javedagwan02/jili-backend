@@ -16,53 +16,72 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
 // ✅ TEST ROUTE
 app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
 
-// ✅ GAME LAUNCH
+// 🔥 GAME LAUNCH WITH TRANSFER WALLET
 app.get("/start-game", async (req,res)=>{
 
-  const userId = req.query.userId || "12345";
+  const userId = req.query.userId;
+
+  if(!userId){
+    return res.json({ error: "userId missing" });
+  }
 
   try{
+
+    // 🔥 FIREBASE SE BALANCE
     const snapshot = await db.collection("users")
-.where("email","==",userId)
-.get();
+      .where("email","==",userId)
+      .get();
 
-let balance = 0;
+    if(snapshot.empty){
+      return res.json({ error: "User not found" });
+    }
 
-snapshot.forEach(doc=>{
-  balance = Number(doc.data().balance || 0);
-});
-console.log("BALANCE SENT:", balance);
+    const doc = snapshot.docs[0];
+    let balance = Number(doc.data().balance || 0);
+
+    console.log("💰 USER BALANCE:", balance);
+
+    // 🔥 STEP 1: TRANSFER WALLET
+    const transferRes = await axios.post(
+      "https://game.gamblly-api.com/v2/transfer",
+      {
+        member_account: userId,
+        amount: balance,
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a"
+      }
+    );
+
+    console.log("✅ TRANSFER RESPONSE:", transferRes.data);
+
+    // 🔥 STEP 2: GAME LAUNCH
     const response = await axios.post(
-  "https://game.gamblly-api.com/v1/gameLaunch.php",
-  {
-    member_account: userId,
-    game_uid: "a990de177577a2e6a889aaac5f57b429",
-    api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-    currency_code: "INR",
-    language: "en",
-    platform: 2,
-    home_url: "https://2xwin.online",
-
-    // 🔥 ADD THIS
-    credit_amount: balance.toString()
-    transfer_id: Date.now().toString()
-  }
-);
+      "https://game.gamblly-api.com/v1/gameLaunch.php",
+      {
+        member_account: userId,
+        game_uid: "a990de177577a2e6a889aaac5f57b429",
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        currency_code: "INR",
+        language: "en",
+        platform: 2,
+        home_url: "https://2xwin.online"
+      }
+    );
 
     const gameUrl = response.data.payload.game_launch_url;
 
-    // 🔥 DIRECT GAME OPEN
+    // 🔥 GAME OPEN
     res.redirect(gameUrl);
 
   }catch(e){
 
-    console.log("ERROR:", e.response?.data || e.message);
+    console.log("❌ ERROR:", e.response?.data || e.message);
 
     res.json({
       error:"Game launch failed",
@@ -73,53 +92,61 @@ console.log("BALANCE SENT:", balance);
 });
 
 
-// 🔥 CALLBACK (WALLET UPDATE)
+// 🔥 CALLBACK (BET / WIN SYNC)
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK:", req.body);
 
-  const data = req.body;
+  try{
 
-  const userEmail = data.player_uid;
-  const action = data.action;
+    const data = req.body;
 
-  const betAmount = Number(data.bet_amount || 0);
-  const winAmount = Number(data.win_amount || 0);
+    const userEmail = data.player_uid;
+    const action = data.action;
 
-  const snapshot = await db.collection("users")
-    .where("email","==",userEmail)
-    .get();
+    const betAmount = Number(data.bet_amount || 0);
+    const winAmount = Number(data.win_amount || 0);
 
-  let newBalance = 0;
+    const snapshot = await db.collection("users")
+      .where("email","==",userEmail)
+      .get();
 
-  if(snapshot.empty){
-    return res.json({ status:false });
+    if(snapshot.empty){
+      return res.json({ status:false });
+    }
+
+    const doc = snapshot.docs[0];
+    let balance = Number(doc.data().balance || 0);
+
+    // 🔻 BET
+    if(action === "bet"){
+      balance -= betAmount;
+      console.log("❌ BET:", betAmount);
+    }
+
+    // 🔺 WIN
+    if(action === "win"){
+      balance += winAmount;
+      console.log("✅ WIN:", winAmount);
+    }
+
+    await doc.ref.update({ balance });
+
+    res.json({
+      status: true,
+      balance: balance
+    });
+
+  }catch(e){
+    console.log("CALLBACK ERROR:", e.message);
+
+    res.json({
+      status:false
+    });
   }
-
-  const doc = snapshot.docs[0];
-
-  let balance = Number(doc.data().balance || 0);
-
-  if(action === "bet"){
-    balance -= betAmount;
-    console.log("❌ BET:", betAmount);
-  }
-
-  if(action === "win"){
-    balance += winAmount;
-    console.log("✅ WIN:", winAmount);
-  }
-
-  newBalance = balance;
-
-  await doc.ref.update({ balance });
-
-  res.json({
-    status: true,
-    balance: newBalance
-  });
 
 });
+
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
