@@ -58,7 +58,7 @@ app.get("/start-game", async (req,res)=>{
       console.log("⚡ Auto username created:", autoUsername);
     }
 
-    const username = data.username;
+    const username = data.username || userId;
 
     console.log("🔥 FINAL REQUEST:", {
       member_account: username,
@@ -67,7 +67,7 @@ app.get("/start-game", async (req,res)=>{
     });
 
     const response = await axios.post(
-      "https://game.gamblly-api.com/production/v1/gameLaunch.php",
+      "https://game.gamblly-api.com/api/game_launch",
       {
         member_account: username,
         game_uid: gameId,
@@ -77,7 +77,7 @@ app.get("/start-game", async (req,res)=>{
         platform: 1,
         home_url: "https://2xwin.online",
 
-        credit_amount: Number(balance).toFixed(2),
+        credit_amount: Number(balance),
 transfer_id: Date.now().toString()
       }
     );
