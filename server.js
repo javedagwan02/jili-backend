@@ -116,14 +116,19 @@ app.post("/callback", async (req, res) => {
 
     const data = req.body;
 
-    const username = data.player_uid; // 🔥 FIXED
+    const username = data.player_uid;
     const action = data.action;
 
-    const betAmount = Number(data.bet_amount || 0);
-    const winAmount = Number(data.win_amount || 0);
+    // 🔥 SAFE AMOUNT
+    const betAmount = Number(data.bet_amount || data.amount || 0);
+    const winAmount = Number(data.win_amount || data.amount || 0);
+
+    console.log("🔥 ACTION:", action);
+    console.log("🔥 BET:", betAmount);
+    console.log("🔥 WIN:", winAmount);
 
     const snapshot = await db.collection("users")
-      .where("username","==",username) // 🔥 FIXED
+      .where("username","==",username)
       .get();
 
     if(snapshot.empty){
@@ -133,12 +138,21 @@ app.post("/callback", async (req, res) => {
     const doc = snapshot.docs[0];
     let balance = Number(doc.data().balance || 0);
 
+    // 🔻 BET
     if(action === "bet"){
       balance -= betAmount;
+      console.log("❌ BET DONE");
     }
 
-    if(action === "win"){
+    // 🔺 WIN (FIXED)
+    if(
+      action === "win" ||
+      action === "settle" ||
+      action === "credit" ||
+      action === "win_settle"
+    ){
       balance += winAmount;
+      console.log("✅ WIN ADDED");
     }
 
     await doc.ref.update({ balance });
@@ -157,7 +171,6 @@ app.post("/callback", async (req, res) => {
   }
 
 });
-
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
