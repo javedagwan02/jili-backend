@@ -77,7 +77,7 @@ app.get("/start-game", async (req,res)=>{
         platform: 1,
         home_url: "https://2xwin.online",
 
-        credit_amount: balance.toString(), // ✅ comma lagao
+        credit_amount: Number(balance).toFixed(2),
 transfer_id: Date.now().toString()
       }
     );
