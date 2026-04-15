@@ -119,13 +119,13 @@ app.post("/callback", async (req, res) => {
     const username = data.player_uid;
     const action = data.action;
 
+    // 🔻 BET
     const betAmount = Number(data.bet_amount || data.amount || 0);
 
-    // 🔥 FIXED WIN
+    // 🔺 WIN (NO amount fallback)
     const winAmount = Number(
       data.payout_amount || 
       data.win_amount || 
-      data.amount || 
       0
     );
 
@@ -146,6 +146,7 @@ app.post("/callback", async (req, res) => {
 
     if(action === "bet"){
       balance -= betAmount;
+      console.log("❌ BET DONE");
     }
 
     if(
@@ -155,6 +156,7 @@ app.post("/callback", async (req, res) => {
       action === "win_settle"
     ){
       balance += winAmount;
+      console.log("✅ WIN ADDED");
     }
 
     await doc.ref.update({ balance });
@@ -166,7 +168,6 @@ app.post("/callback", async (req, res) => {
 
   }catch(e){
     console.log("CALLBACK ERROR:", e.message);
-
     res.json({ status:false });
   }
 
