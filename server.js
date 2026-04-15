@@ -67,7 +67,7 @@ app.get("/start-game", async (req,res)=>{
     });
 
     const response = await axios.post(
-      "https://game.gamblly-api.com/api/game_launch",
+  "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
         member_account: username,
         game_uid: gameId,
