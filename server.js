@@ -26,7 +26,7 @@ app.get("/", (req,res)=>{
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
-  const gameId = req.query.gameId; // 🔥 NEW
+  const gameId = req.query.gameId;
 
   if(!userId || !gameId){
     return res.json({ error: "Missing userId or gameId" });
@@ -66,12 +66,11 @@ app.get("/start-game", async (req,res)=>{
       gameId
     });
 
-    // 🔥 API CALL (DYNAMIC GAME)
     const response = await axios.post(
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
         member_account: username,
-        game_uid: gameId, // 🔥 MAIN CHANGE
+        game_uid: gameId,
         api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         currency_code: "INR",
         language: "en",
@@ -88,7 +87,6 @@ app.get("/start-game", async (req,res)=>{
     const gameUrl = response.data?.game_url;
 
     if (!gameUrl) {
-      console.log("❌ FULL RESPONSE:", response.data);
       return res.json({ error: "Game URL not received", data: response.data });
     }
 
@@ -107,7 +105,7 @@ app.get("/start-game", async (req,res)=>{
 });
 
 
-// 🔥 CALLBACK (BET / WIN)
+// 🔥 CALLBACK (FINAL FIXED)
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK:", req.body);
@@ -118,20 +116,6 @@ app.post("/callback", async (req, res) => {
 
     const username = data.player_uid;
     const action = data.action;
-
-    // 🔻 BET
-    const betAmount = Number(data.bet_amount || data.amount || 0);
-
-    // 🔺 WIN (NO amount fallback)
-    const winAmount = Number(
-      data.payout_amount || 
-      data.win_amount || 
-      0
-    );
-
-    console.log("🔥 ACTION:", action);
-    console.log("🔥 BET:", betAmount);
-    console.log("🔥 WIN:", winAmount);
 
     const snapshot = await db.collection("users")
       .where("username","==",username)
@@ -144,19 +128,42 @@ app.post("/callback", async (req, res) => {
     const doc = snapshot.docs[0];
     let balance = Number(doc.data().balance || 0);
 
+    console.log("🔥 ACTION:", action);
+
+    // 🔻 NORMAL BET
     if(action === "bet"){
+      const betAmount = Number(data.amount || data.bet_amount || 0);
       balance -= betAmount;
-      console.log("❌ BET DONE");
+
+      console.log("❌ BET:", betAmount);
     }
 
+    // 🔥 BET + WIN TOGETHER (MOST IMPORTANT FIX)
+    if(action === "bet_win"){
+      const bet = Number(data.bet_amount || data.amount || 0);
+      const win = Number(data.win_amount || 0);
+
+      const profit = win - bet;
+
+      balance += profit;
+
+      console.log("🔥 BET:", bet);
+      console.log("🔥 WIN:", win);
+      console.log("🔥 PROFIT:", profit);
+    }
+
+    // 🔺 NORMAL WIN / SETTLE
     if(
-      action === "win" ||
       action === "settle" ||
+      action === "win" ||
       action === "credit" ||
       action === "win_settle"
     ){
+      const winAmount = Number(data.payout_amount || data.win_amount || 0);
+
       balance += winAmount;
-      console.log("✅ WIN ADDED");
+
+      console.log("✅ WIN:", winAmount);
     }
 
     await doc.ref.update({ balance });
@@ -172,7 +179,6 @@ app.post("/callback", async (req, res) => {
   }
 
 });
-
 
 
 // ✅ SERVER START
