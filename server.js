@@ -119,9 +119,15 @@ app.post("/callback", async (req, res) => {
     const username = data.player_uid;
     const action = data.action;
 
-    // 🔥 SAFE AMOUNT
     const betAmount = Number(data.bet_amount || data.amount || 0);
-    const winAmount = Number(data.win_amount || data.amount || 0);
+
+    // 🔥 FIXED WIN
+    const winAmount = Number(
+      data.payout_amount || 
+      data.win_amount || 
+      data.amount || 
+      0
+    );
 
     console.log("🔥 ACTION:", action);
     console.log("🔥 BET:", betAmount);
@@ -138,13 +144,10 @@ app.post("/callback", async (req, res) => {
     const doc = snapshot.docs[0];
     let balance = Number(doc.data().balance || 0);
 
-    // 🔻 BET
     if(action === "bet"){
       balance -= betAmount;
-      console.log("❌ BET DONE");
     }
 
-    // 🔺 WIN (FIXED)
     if(
       action === "win" ||
       action === "settle" ||
@@ -152,7 +155,6 @@ app.post("/callback", async (req, res) => {
       action === "win_settle"
     ){
       balance += winAmount;
-      console.log("✅ WIN ADDED");
     }
 
     await doc.ref.update({ balance });
@@ -165,12 +167,12 @@ app.post("/callback", async (req, res) => {
   }catch(e){
     console.log("CALLBACK ERROR:", e.message);
 
-    res.json({
-      status:false
-    });
+    res.json({ status:false });
   }
 
 });
+
+
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
