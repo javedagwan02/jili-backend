@@ -1,7 +1,9 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-
+const api = axios.create({
+  timeout: 7000 // 🔥 7 sec max
+});
 // 🔥 FIREBASE ADMIN
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccountKey.json");
@@ -49,7 +51,7 @@ app.get("/start-game", async (req,res)=>{
 
     let balance = Number(data.balance || 0);
 
-    // 🔥 AUTO USERNAME
+    // 🔥 USERNAME AUTO
     if(!data.username){
       const autoUsername =
         data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
@@ -60,8 +62,8 @@ app.get("/start-game", async (req,res)=>{
 
     const username = data.username;
 
-    // 🔥 TIMEOUT FIX (IMPORTANT)
-    const response = await axios.post(
+    // 🔥 FAST API CALL
+    const response = await api.post(
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
         member_account: username,
@@ -73,9 +75,6 @@ app.get("/start-game", async (req,res)=>{
         home_url: "https://2xwin.online",
         credit_amount: balance,
         transfer_id: Date.now().toString()
-      },
-      {
-        timeout: 15000 // 🔥 MAX 8 sec (IMPORTANT FIX)
       }
     );
 
@@ -91,9 +90,13 @@ app.get("/start-game", async (req,res)=>{
 
     console.log("❌ ERROR:", e.message);
 
+    // 🔥 SMART ERROR HANDLE
+    if(e.code === "ECONNABORTED"){
+      return res.json({ error:"Server slow, try again" });
+    }
+
     return res.json({
-      error:"Game launch failed",
-      message: e.message
+      error:"Game server down"
     });
   }
 
