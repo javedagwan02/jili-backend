@@ -21,7 +21,9 @@ app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-
+app.get("/ping", (req, res) => {
+  res.send("OK");
+});
 // 🔥 GAME LAUNCH (MULTI GAME)
 app.get("/start-game", async (req,res)=>{
 
@@ -73,7 +75,7 @@ app.get("/start-game", async (req,res)=>{
         transfer_id: Date.now().toString()
       },
       {
-        timeout: 8000 // 🔥 MAX 8 sec (IMPORTANT FIX)
+        timeout: 15000 // 🔥 MAX 8 sec (IMPORTANT FIX)
       }
     );
 
