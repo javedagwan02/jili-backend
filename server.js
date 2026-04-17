@@ -47,27 +47,20 @@ app.get("/start-game", async (req,res)=>{
 
     let balance = Number(data.balance || 0);
 
-    // 🔥 AUTO USERNAME FIX
+    // 🔥 AUTO USERNAME
     if(!data.username){
       const autoUsername =
         data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
 
       await doc.ref.update({ username: autoUsername });
       data.username = autoUsername;
-
-      console.log("⚡ Auto username created:", autoUsername);
     }
 
-    const username = data.username || userId;
+    const username = data.username;
 
-    console.log("🔥 FINAL REQUEST:", {
-      member_account: username,
-      balance,
-      gameId
-    });
-
+    // 🔥 TIMEOUT FIX (IMPORTANT)
     const response = await axios.post(
-  "https://game.gamblly-api.com/production/v1/gameLaunch.php",
+      "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
         member_account: username,
         game_uid: gameId,
@@ -76,34 +69,33 @@ app.get("/start-game", async (req,res)=>{
         language: "en",
         platform: 1,
         home_url: "https://2xwin.online",
-
-        credit_amount: Number(balance),
-transfer_id: Date.now().toString()
+        credit_amount: balance,
+        transfer_id: Date.now().toString()
+      },
+      {
+        timeout: 8000 // 🔥 MAX 8 sec (IMPORTANT FIX)
       }
     );
-
-    console.log("🔥 API RESPONSE:", response.data);
 
     const gameUrl = response.data?.game_url;
 
     if (!gameUrl) {
-      return res.json({ error: "Game URL not received", data: response.data });
+      return res.json({ error: "Game URL not received" });
     }
 
-    res.redirect(gameUrl);
+    return res.redirect(gameUrl);
 
   }catch(e){
 
-    console.log("❌ ERROR:", e.response?.data || e.message);
+    console.log("❌ ERROR:", e.message);
 
-    res.json({
+    return res.json({
       error:"Game launch failed",
-      details: e.response?.data || e.message
+      message: e.message
     });
   }
 
 });
-
 
 // 🔥 CALLBACK (FINAL FIXED)
 app.post("/callback", async (req, res) => {
