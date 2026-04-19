@@ -27,8 +27,6 @@ app.get("/ping", (req, res) => {
   res.send("OK");
 });
 // 🔥 GAME LAUNCH (MULTI GAME)
-const crypto = require("crypto");
-
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
@@ -48,61 +46,61 @@ app.get("/start-game", async (req,res)=>{
       return res.json({ error: "User not found" });
     }
 
-    const docSnap = snapshot.docs[0];
-    const data = docSnap.data();
+    const doc = snapshot.docs[0];
+    let data = doc.data();
 
-    let username = data.username;
+    let balance = Number(data.balance || 0);
 
-    // 🔥 agar username nahi hai to bana de
-    if(!username){
-      username = data.email.split("@")[0] + Math.floor(1000 + Math.random()*9000);
-      await docSnap.ref.update({ username });
+    // 🔥 USERNAME AUTO
+    if(!data.username){
+      const autoUsername =
+        data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
+
+      await doc.ref.update({ username: autoUsername });
+      data.username = autoUsername;
     }
 
-    // 🔥 SECRET KEY
-    const secret = "5d13715ccb2a3fa6a43523f2e2fd7cbc";
+    const username = data.username;
 
-    // 🔥 PAYLOAD
-    const payload = {
-      merchant_code: "2xwin_api",
-      user_id: username,
-      game_code: gameId,
-      currency: "INR",
-      timestamp: Date.now()
-    };
-
-    // 🔥 SIGNATURE
-    const signString = Object.values(payload).join("");
-    const signature = crypto
-      .createHmac("sha256", secret)
-      .update(signString)
-      .digest("hex");
-
-    // 🔥 API CALL
-    const response = await axios.post(
-      "https://api-proxy.h5gaming.biz/game/launch",
+    // 🔥 FAST API CALL
+    const response = await api.post(
+      "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
-        ...payload,
-        sign: signature
+        member_account: username,
+        game_uid: gameId,
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        currency_code: "INR",
+        language: "en",
+        platform: 1,
+        home_url: "https://2xwin.online",
+        credit_amount: balance,
+        transfer_id: Date.now().toString()
       }
     );
 
-    const gameUrl = response.data?.data?.game_url;
+    const gameUrl = response.data?.game_url;
 
-    if(!gameUrl){
-      return res.json({ error:"Game URL not received" });
+    if (!gameUrl) {
+      return res.json({ error: "Game URL not received" });
     }
 
-    // 🔥 GAME OPEN
     return res.redirect(gameUrl);
 
   }catch(e){
+
     console.log("❌ ERROR:", e.message);
-    return res.json({ error:"Game launch failed" });
+
+    // 🔥 SMART ERROR HANDLE
+    if(e.code === "ECONNABORTED"){
+      return res.json({ error:"Server slow, try again" });
+    }
+
+    return res.json({
+      error:"Game server down"
+    });
   }
 
 });
-  
 
 // 🔥 CALLBACK (FINAL FIXED)
 app.post("/callback", async (req, res) => {
