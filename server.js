@@ -61,6 +61,14 @@ app.get("/start-game", async (req,res)=>{
     }
 
     const username = data.username;
+    // 🔥 SAVE LIVE STATUS
+await db.collection("liveUsers").doc(userId).set({
+  email: userId,
+  gameId: gameId,
+  username: username,
+  status: "online",
+  startTime: Date.now()
+});
 
     // 🔥 FAST API CALL
     const response = await api.post(
@@ -164,7 +172,11 @@ app.post("/callback", async (req, res) => {
     }
 
     await doc.ref.update({ balance });
-
+// 🔻 USER OFFLINE UPDATE
+await db.collection("liveUsers").doc(doc.data().email).update({
+  status: "offline",
+  lastSeen: Date.now()
+});
     res.json({
       status: true,
       balance: balance
@@ -177,7 +189,19 @@ app.post("/callback", async (req, res) => {
 
 });
 
+// 🔥 ADMIN LIVE USERS API
+app.get("/admin/live-users", async (req,res)=>{
 
+  const snapshot = await db.collection("liveUsers").get();
+
+  let users = [];
+
+  snapshot.forEach(doc=>{
+    users.push(doc.data());
+  });
+
+  res.json(users);
+});
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
 
