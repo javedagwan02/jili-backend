@@ -186,6 +186,7 @@ app.get("/start-game", async (req, res) => {
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK HIT");
+
   console.log(
     JSON.stringify(req.body, null, 2)
   );
@@ -194,8 +195,13 @@ app.post("/callback", async (req, res) => {
 
     const data = req.body;
 
-    const username = data.player_uid;
-    const action = data.action;
+    const username =
+      data.player_uid;
+
+    const action =
+      String(
+        data.action || ""
+      ).toLowerCase();
 
     if (!username) {
 
@@ -203,62 +209,91 @@ app.post("/callback", async (req, res) => {
         status: false,
         error: "Missing username"
       });
+
     }
 
     // 🔥 FIND USER
-    const snapshot = await db.collection("users")
+    const snapshot =
+      await db.collection("users")
       .where("username", "==", username)
       .limit(1)
       .get();
 
     if (snapshot.empty) {
 
-      console.log("❌ USER NOT FOUND");
+      console.log(
+        "❌ USER NOT FOUND"
+      );
 
       return res.json({
         status: false
       });
+
     }
 
     const doc = snapshot.docs[0];
 
     let balance = parseFloat(
-      Number(doc.data().balance || 0).toFixed(2)
+      Number(
+        doc.data().balance || 0
+      ).toFixed(2)
     );
 
-    console.log("🔥 ACTION:", action);
+    console.log(
+      "🔥 ACTION:",
+      action
+    );
 
-    // 🔻 BET
-    if (action === "bet") {
+    // 🔻 BET CALLBACK
+    if (
+      action.includes("bet")
+    ) {
 
-      const betAmount = parseFloat(
+      const betAmount =
+      parseFloat(
 
         data.bet_amount ||
+
         data.amount ||
+
         0
 
+      );
+
+      console.log(
+        "🔻 BET:",
+        betAmount
       );
 
       balance -= betAmount;
-
-      console.log("❌ BET:", betAmount);
     }
 
-    // 🔥 WIN
-    if (action === "win") {
+    // ✅ WIN CALLBACK
+    else if (
+      action.includes("win")
+    ) {
 
-      const winAmount = parseFloat(
+      const winAmount =
+      parseFloat(
 
         data.win_amount ||
-        data.amount ||
-        data.bet_amount ||
+
+        data.payout_amount ||
+
+        data.payoff ||
+
+        data.win ||
+
         0
 
       );
 
-      balance += winAmount;
+      console.log(
+        "✅ WIN:",
+        winAmount
+      );
 
-      console.log("✅ WIN:", winAmount);
+      balance += winAmount;
     }
 
     // ✅ FIX DECIMAL
@@ -268,7 +303,9 @@ app.post("/callback", async (req, res) => {
 
     // ❌ NEGATIVE FIX
     if (balance < 0) {
+
       balance = 0;
+
     }
 
     // 🔥 UPDATE BALANCE
@@ -280,11 +317,16 @@ app.post("/callback", async (req, res) => {
     await db.collection("liveUsers")
       .doc(doc.data().email)
       .set({
+
         lastSeen: Date.now(),
         status: "offline"
+
       }, { merge: true });
 
-    console.log("💰 NEW BALANCE:", balance);
+    console.log(
+      "💰 NEW BALANCE:",
+      balance
+    );
 
     return res.json({
       status: true,
@@ -293,13 +335,17 @@ app.post("/callback", async (req, res) => {
 
   } catch (e) {
 
-    console.log("❌ CALLBACK ERROR:");
+    console.log(
+      "❌ CALLBACK ERROR:"
+    );
+
     console.log(e.message);
 
     return res.json({
       status: false,
       error: e.message
     });
+
   }
 
 });
