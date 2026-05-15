@@ -46,10 +46,12 @@ app.get("/start-game", async (req, res) => {
   console.log("🎰 GAME:", gameId);
 
   if (!userId || !gameId) {
+
     return res.json({
       success: false,
       error: "Missing userId or gameId"
     });
+
   }
 
   try {
@@ -62,18 +64,20 @@ app.get("/start-game", async (req, res) => {
       .get();
 
     if (snapshot.empty) {
+
       return res.json({
         success: false,
         error: "User not found"
       });
+
     }
 
     const doc = snapshot.docs[0];
     const data = doc.data();
 
     let balance = parseFloat(
-  Number(data.balance || 0).toFixed(2)
-);
+      Number(data.balance || 0).toFixed(2)
+    );
 
     // 🔥 SAFE USERNAME
     let username;
@@ -92,6 +96,7 @@ app.get("/start-game", async (req, res) => {
       await doc.ref.update({
         username: username
       });
+
     }
 
     console.log("🧑 USERNAME:", username);
@@ -110,15 +115,28 @@ app.get("/start-game", async (req, res) => {
 
     // 🔥 PROVIDER REQUEST
     const payload = {
+
       member_account: username,
       game_uid: gameId,
-      api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+
+      api_key:
+      "fecfaa08d7aCodeHub944b04ac2cf59a",
+
       currency_code: "INR",
+
       language: "en",
+
       platform: 2,
-      home_url: "https://2xwin.online",
-      credit_amount: balance.toFixed(2),
-      transfer_id: Date.now().toString()
+
+      home_url:
+      "https://2xwin.online",
+
+      credit_amount:
+      balance.toFixed(2),
+
+      transfer_id:
+      Date.now().toString()
+
     };
 
     console.log("📤 PAYLOAD:");
@@ -133,9 +151,10 @@ app.get("/start-game", async (req, res) => {
       {
         headers: {
           "Content-Type":
-            "application/x-www-form-urlencoded"
+          "application/x-www-form-urlencoded"
         }
       }
+
     );
 
     console.log("📥 PROVIDER RESPONSE:");
@@ -155,6 +174,7 @@ app.get("/start-game", async (req, res) => {
         error: "Provider failed",
         providerResponse: response.data
       });
+
     }
 
     // ✅ SEND URL
@@ -176,8 +196,10 @@ app.get("/start-game", async (req, res) => {
     return res.json({
       success: false,
       error: "Game launch failed",
-      details: e.response?.data || e.message
+      details:
+      e.response?.data || e.message
     });
+
   }
 
 });
@@ -186,7 +208,6 @@ app.get("/start-game", async (req, res) => {
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK HIT");
-
   console.log(
     JSON.stringify(req.body, null, 2)
   );
@@ -196,34 +217,31 @@ app.post("/callback", async (req, res) => {
     const data = req.body;
 
     const username =
-      data.player_uid;
 
-    const action =
-      String(
-        data.action || ""
-      ).toLowerCase();
+      data.player_uid ||
+
+      data.member_account ||
+
+      data.username;
 
     if (!username) {
 
       return res.json({
         status: false,
-        error: "Missing username"
+        error: "Username missing"
       });
 
     }
 
     // 🔥 FIND USER
-    const snapshot =
-      await db.collection("users")
+    const snapshot = await db.collection("users")
       .where("username", "==", username)
       .limit(1)
       .get();
 
     if (snapshot.empty) {
 
-      console.log(
-        "❌ USER NOT FOUND"
-      );
+      console.log("❌ USER NOT FOUND");
 
       return res.json({
         status: false
@@ -233,85 +251,73 @@ app.post("/callback", async (req, res) => {
 
     const doc = snapshot.docs[0];
 
-    let balance = parseFloat(
-      Number(
-        doc.data().balance || 0
-      ).toFixed(2)
+    let currentBalance = Number(
+      doc.data().balance || 0
     );
 
     console.log(
-      "🔥 ACTION:",
-      action
+      "💰 OLD BALANCE:",
+      currentBalance
     );
 
-    // 🔻 BET CALLBACK
-    if (
-      action.includes("bet")
-    ) {
+    // 🔥 BET AMOUNT
+    const betAmount = parseFloat(
 
-      const betAmount =
-      parseFloat(
+      data.bet_amount ||
 
-        data.bet_amount ||
+      data.amount ||
 
-        data.amount ||
+      data.bet ||
 
-        0
+      0
 
-      );
+    );
 
-      console.log(
-        "🔻 BET:",
-        betAmount
-      );
+    // 🔥 WIN AMOUNT
+    const winAmount = parseFloat(
 
-      balance -= betAmount;
-    }
+      data.win_amount ||
 
-    // ✅ WIN CALLBACK
-    else if (
-      action.includes("win")
-    ) {
+      data.payout_amount ||
 
-      const winAmount =
-      parseFloat(
+      data.payoff ||
 
-        data.win_amount ||
+      data.win ||
 
-        data.payout_amount ||
+      data.payout ||
 
-        data.payoff ||
+      data.prize ||
 
-        data.win ||
+      0
 
-        0
+    );
 
-      );
+    console.log("🎯 BET:", betAmount);
+    console.log("🏆 WIN:", winAmount);
 
-      console.log(
-        "✅ WIN:",
-        winAmount
-      );
+    // 🔥 FINAL BALANCE
+    let newBalance =
+      currentBalance - betAmount + winAmount;
 
-      balance += winAmount;
-    }
-
-    // ✅ FIX DECIMAL
-    balance = parseFloat(
-      balance.toFixed(2)
+    // 🔥 FIX DECIMAL
+    newBalance = parseFloat(
+      newBalance.toFixed(2)
     );
 
     // ❌ NEGATIVE FIX
-    if (balance < 0) {
-
-      balance = 0;
-
+    if (newBalance < 0) {
+      newBalance = 0;
     }
 
-    // 🔥 UPDATE BALANCE
+    // 🔥 SAVE BALANCE
     await doc.ref.update({
-      balance: balance
+      balance: newBalance
     });
+
+    console.log(
+      "✅ NEW BALANCE:",
+      newBalance
+    );
 
     // 🔥 UPDATE LIVE STATUS
     await db.collection("liveUsers")
@@ -323,22 +329,16 @@ app.post("/callback", async (req, res) => {
 
       }, { merge: true });
 
-    console.log(
-      "💰 NEW BALANCE:",
-      balance
-    );
-
     return res.json({
+
       status: true,
-      balance: balance
+      balance: newBalance
+
     });
 
   } catch (e) {
 
-    console.log(
-      "❌ CALLBACK ERROR:"
-    );
-
+    console.log("❌ CALLBACK ERROR");
     console.log(e.message);
 
     return res.json({
@@ -349,6 +349,7 @@ app.post("/callback", async (req, res) => {
   }
 
 });
+
 // 🔥 ADMIN LIVE USERS
 app.get("/admin/live-users", async (req, res) => {
 
@@ -371,6 +372,7 @@ app.get("/admin/live-users", async (req, res) => {
       success: false,
       error: e.message
     });
+
   }
 
 });
