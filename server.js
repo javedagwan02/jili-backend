@@ -30,7 +30,8 @@ app.get("/ping", (req, res) => {
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
-  const gameId = req.query.gameId;
+  const gameId =
+"e794bf5717aca371152df192341fe68b";
 
   if(!userId || !gameId){
     return res.json({ error: "Missing userId or gameId" });
@@ -79,9 +80,9 @@ await db.collection("liveUsers").doc(userId).set({
         api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         currency_code: "INR",
         language: "en",
-        platform: 1,
+        platform: 2,
         home_url: "https://2xwin.online",
-        credit_amount: balance,
+        credit_amount: String(balance),
         transfer_id: Date.now().toString()
       }
     );
@@ -113,7 +114,9 @@ await db.collection("liveUsers").doc(userId).set({
 // 🔥 CALLBACK (FINAL FIXED)
 app.post("/callback", async (req, res) => {
 
-  console.log("🔥 CALLBACK:", req.body);
+  console.log(
+    JSON.stringify(req.body, null, 2)
+  );
 
   try{
 
@@ -144,33 +147,29 @@ app.post("/callback", async (req, res) => {
     }
 
     // 🔥 BET + WIN TOGETHER (MOST IMPORTANT FIX)
-    if(action === "bet_win"){
-      const bet = Number(data.bet_amount || data.amount || 0);
-      const win = Number(data.win_amount || 0);
 
-      const profit = win - bet;
+if(action === "bet"){
 
-      balance += profit;
+  const betAmount = Number(
+    data.bet_amount || 0
+  );
 
-      console.log("🔥 BET:", bet);
-      console.log("🔥 WIN:", win);
-      console.log("🔥 PROFIT:", profit);
-    }
+  balance -= betAmount;
 
-    // 🔺 NORMAL WIN / SETTLE
-    if(
-      action === "settle" ||
-      action === "win" ||
-      action === "credit" ||
-      action === "win_settle"
-    ){
-      const winAmount = Number(data.payout_amount || data.win_amount || 0);
+  console.log("BET:", betAmount);
+}
 
-      balance += winAmount;
+// WIN
+if(action === "win"){
 
-      console.log("✅ WIN:", winAmount);
-    }
+  const winAmount = Number(
+    data.win_amount || 0
+  );
 
+  balance += winAmount;
+
+  console.log("WIN:", winAmount);
+}
     await doc.ref.update({ balance });
 // 🔻 USER OFFLINE UPDATE
 await db.collection("liveUsers").doc(doc.data().email).update({
