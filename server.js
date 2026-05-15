@@ -30,8 +30,7 @@ app.get("/ping", (req, res) => {
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
-  const gameId =
-"e794bf5717aca371152df192341fe68b";
+  const gameId = req.query.gameId;
 
   if(!userId || !gameId){
     return res.json({ error: "Missing userId or gameId" });
@@ -52,26 +51,31 @@ app.get("/start-game", async (req,res)=>{
 
     let balance = Number(data.balance || 0);
 
-    // 🔥 USERNAME AUTO
     if(!data.username){
-      const autoUsername =
-        data.email.split("@")[0] + Math.floor(1000 + Math.random() * 9000);
 
-      await doc.ref.update({ username: autoUsername });
+      const autoUsername =
+        data.email.split("@")[0] +
+        Math.floor(1000 + Math.random() * 9000);
+
+      await doc.ref.update({
+        username: autoUsername
+      });
+
       data.username = autoUsername;
     }
 
     const username = data.username;
-    // 🔥 SAVE LIVE STATUS
-await db.collection("liveUsers").doc(userId).set({
-  email: userId,
-  gameId: gameId,
-  username: username,
-  status: "online",
-  startTime: Date.now()
-});
 
-    // 🔥 FAST API CALL
+    await db.collection("liveUsers")
+      .doc(userId)
+      .set({
+        email: userId,
+        gameId: gameId,
+        username: username,
+        status: "online",
+        startTime: Date.now()
+      });
+
     const response = await api.post(
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
       {
@@ -89,8 +93,10 @@ await db.collection("liveUsers").doc(userId).set({
 
     const gameUrl = response.data?.game_url;
 
-    if (!gameUrl) {
-      return res.json({ error: "Game URL not received" });
+    if(!gameUrl){
+      return res.json({
+        error:"Game URL not received"
+      });
     }
 
     return res.redirect(gameUrl);
@@ -99,18 +105,12 @@ await db.collection("liveUsers").doc(userId).set({
 
     console.log("❌ ERROR:", e.message);
 
-    // 🔥 SMART ERROR HANDLE
-    if(e.code === "ECONNABORTED"){
-      return res.json({ error:"Server slow, try again" });
-    }
-
     return res.json({
       error:"Game server down"
     });
   }
 
 });
-
 // 🔥 CALLBACK (FINAL FIXED)
 app.post("/callback", async (req, res) => {
 
