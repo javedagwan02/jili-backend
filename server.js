@@ -1,9 +1,13 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
+const qs = require("qs");
+
+// 🔥 AXIOS
 const api = axios.create({
-  timeout: 7000 // 🔥 7 sec max
+  timeout: 7000
 });
+
 // 🔥 FIREBASE ADMIN
 const admin = require("firebase-admin");
 const serviceAccount = require("./serviceAccountKey.json");
@@ -15,6 +19,7 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
@@ -23,27 +28,33 @@ app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
 
-app.get("/ping", (req, res) => {
+app.get("/ping", (req,res)=>{
   res.send("OK");
 });
-// 🔥 GAME LAUNCH (MULTI GAME)
+
+// 🔥 GAME LAUNCH
 app.get("/start-game", async (req,res)=>{
 
   const userId = req.query.userId;
   const gameId = req.query.gameId;
 
   if(!userId || !gameId){
-    return res.json({ error: "Missing userId or gameId" });
+    return res.json({
+      error:"Missing userId or gameId"
+    });
   }
 
   try{
 
+    // 🔥 USER FIND
     const snapshot = await db.collection("users")
       .where("email","==",userId)
       .get();
 
     if(snapshot.empty){
-      return res.json({ error: "User not found" });
+      return res.json({
+        error:"User not found"
+      });
     }
 
     const doc = snapshot.docs[0];
@@ -51,6 +62,7 @@ app.get("/start-game", async (req,res)=>{
 
     let balance = Number(data.balance || 0);
 
+    // 🔥 AUTO USERNAME
     if(!data.username){
 
       const autoUsername =
@@ -58,7 +70,7 @@ app.get("/start-game", async (req,res)=>{
         Math.floor(1000 + Math.random() * 9000);
 
       await doc.ref.update({
-        username: autoUsername
+        username:autoUsername
       });
 
       data.username = autoUsername;
@@ -66,56 +78,84 @@ app.get("/start-game", async (req,res)=>{
 
     const username = data.username;
 
+    // 🔥 LIVE USER SAVE
     await db.collection("liveUsers")
       .doc(userId)
       .set({
-        email: userId,
-        gameId: gameId,
-        username: username,
-        status: "online",
-        startTime: Date.now()
+        email:userId,
+        gameId:gameId,
+        username:username,
+        status:"online",
+        startTime:Date.now()
       });
 
+    // 🔥 PROVIDER API CALL
     const response = await api.post(
+
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
-      {
+
+      qs.stringify({
+
         member_account: username,
         game_uid: gameId,
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+        credit_amount: String(balance),
         currency_code: "INR",
         language: "en",
         platform: 2,
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         home_url: "https://2xwin.online",
-        credit_amount: String(balance),
         transfer_id: Date.now().toString()
+
+      }),
+
+      {
+        headers:{
+          "Content-Type":
+          "application/x-www-form-urlencoded"
+        }
       }
+
     );
+
+    console.log("🔥 PROVIDER RESPONSE:");
+    console.log(response.data);
 
     const gameUrl = response.data?.game_url;
 
     if(!gameUrl){
+
       return res.json({
-        error:"Game URL not received"
+        error:"Game URL not received",
+        providerResponse: response.data
       });
+
     }
 
+    // 🔥 REDIRECT GAME
     return res.redirect(gameUrl);
 
   }catch(e){
 
-    console.log("❌ ERROR:", e.message);
+    console.log("❌ ERROR:");
+
+    if(e.response){
+      console.log(e.response.data);
+    }else{
+      console.log(e.message);
+    }
 
     return res.json({
-      error:"Game server down"
+      error:"Game launch failed"
     });
   }
 
 });
-// 🔥 CALLBACK (FINAL FIXED)
-app.post("/callback", async (req, res) => {
+
+// 🔥 CALLBACK
+app.post("/callback", async (req,res)=>{
 
   console.log(
-    JSON.stringify(req.body, null, 2)
+    JSON.stringify(req.body,null,2)
   );
 
   try{
@@ -130,60 +170,76 @@ app.post("/callback", async (req, res) => {
       .get();
 
     if(snapshot.empty){
-      return res.json({ status:false });
+
+      return res.json({
+        status:false
+      });
+
     }
 
     const doc = snapshot.docs[0];
-    let balance = Number(doc.data().balance || 0);
+
+    let balance = Number(
+      doc.data().balance || 0
+    );
 
     console.log("🔥 ACTION:", action);
 
-    // 🔻 NORMAL BET
+    // 🔻 BET
     if(action === "bet"){
-      const betAmount = Number(data.amount || data.bet_amount || 0);
+
+      const betAmount = Number(
+        data.bet_amount || 0
+      );
+
       balance -= betAmount;
 
       console.log("❌ BET:", betAmount);
     }
 
-    // 🔥 BET + WIN TOGETHER (MOST IMPORTANT FIX)
+    // 🔥 WIN
+    if(action === "win"){
 
-if(action === "bet"){
+      const winAmount = Number(
+        data.win_amount || 0
+      );
 
-  const betAmount = Number(
-    data.bet_amount || 0
-  );
+      balance += winAmount;
 
-  balance -= betAmount;
+      console.log("✅ WIN:", winAmount);
+    }
 
-  console.log("BET:", betAmount);
-}
-
-// WIN
-if(action === "win"){
-
-  const winAmount = Number(
-    data.win_amount || 0
-  );
-
-  balance += winAmount;
-
-  console.log("WIN:", winAmount);
-}
-    await doc.ref.update({ balance });
-// 🔻 USER OFFLINE UPDATE
-await db.collection("liveUsers").doc(doc.data().email).update({
-  status: "offline",
-  lastSeen: Date.now()
-});
-    res.json({
-      status: true,
+    // 🔥 UPDATE BALANCE
+    await doc.ref.update({
       balance: balance
     });
 
+    // 🔥 USER OFFLINE
+    await db.collection("liveUsers")
+      .doc(doc.data().email)
+      .update({
+        status:"offline",
+        lastSeen:Date.now()
+      });
+
+    return res.json({
+      status:true,
+      balance:balance
+    });
+
   }catch(e){
-    console.log("CALLBACK ERROR:", e.message);
-    res.json({ status:false });
+
+    console.log("❌ CALLBACK ERROR:");
+
+    if(e.response){
+      console.log(e.response.data);
+    }else{
+      console.log(e.message);
+    }
+
+    return res.json({
+      status:false
+    });
   }
 
 });
@@ -191,7 +247,8 @@ await db.collection("liveUsers").doc(doc.data().email).update({
 // 🔥 ADMIN LIVE USERS API
 app.get("/admin/live-users", async (req,res)=>{
 
-  const snapshot = await db.collection("liveUsers").get();
+  const snapshot =
+    await db.collection("liveUsers").get();
 
   let users = [];
 
@@ -200,11 +257,14 @@ app.get("/admin/live-users", async (req,res)=>{
   });
 
   res.json(users);
+
 });
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, ()=>{
-  console.log("🚀 Server started on port " + PORT);
+  console.log(
+    "🚀 Server started on port " + PORT
+  );
 });
