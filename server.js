@@ -222,18 +222,21 @@ app.post("/callback", async (req, res) => {
 
     const doc = snapshot.docs[0];
 
-    let balance =
-      Number(doc.data().balance || 0);
+    let balance = parseFloat(
+      Number(doc.data().balance || 0).toFixed(2)
+    );
 
     console.log("🔥 ACTION:", action);
 
     // 🔻 BET
     if (action === "bet") {
 
-      const betAmount = Number(
+      const betAmount = parseFloat(
+
         data.bet_amount ||
         data.amount ||
         0
+
       );
 
       balance -= betAmount;
@@ -244,14 +247,24 @@ app.post("/callback", async (req, res) => {
     // 🔥 WIN
     if (action === "win") {
 
-      const winAmount = Number(
-        data.win_amount || 0
+      const winAmount = parseFloat(
+
+        data.win_amount ||
+        data.amount ||
+        data.bet_amount ||
+        0
+
       );
 
       balance += winAmount;
 
       console.log("✅ WIN:", winAmount);
     }
+
+    // ✅ FIX DECIMAL
+    balance = parseFloat(
+      balance.toFixed(2)
+    );
 
     // ❌ NEGATIVE FIX
     if (balance < 0) {
@@ -290,7 +303,6 @@ app.post("/callback", async (req, res) => {
   }
 
 });
-
 // 🔥 ADMIN LIVE USERS
 app.get("/admin/live-users", async (req, res) => {
 
