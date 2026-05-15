@@ -71,7 +71,9 @@ app.get("/start-game", async (req, res) => {
     const doc = snapshot.docs[0];
     const data = doc.data();
 
-    let balance = Number(data.balance || 0);
+    let balance = parseFloat(
+  Number(data.balance || 0).toFixed(2)
+);
 
     // 🔥 SAFE USERNAME
     let username;
@@ -115,7 +117,7 @@ app.get("/start-game", async (req, res) => {
       language: "en",
       platform: 2,
       home_url: "https://2xwin.online",
-      credit_amount: String(balance),
+      credit_amount: balance.toFixed(2),
       transfer_id: Date.now().toString()
     };
 
