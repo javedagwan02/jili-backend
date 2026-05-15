@@ -3,9 +3,16 @@ const axios = require("axios");
 const cors = require("cors");
 const qs = require("qs");
 
+// 🔥 EXPRESS
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // 🔥 AXIOS
 const api = axios.create({
-  timeout: 7000
+  timeout: 15000
 });
 
 // 🔥 FIREBASE ADMIN
@@ -18,156 +25,196 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-const app = express();
-
-app.use(cors());
-app.use(express.json());
-
-// ✅ TEST
-app.get("/", (req,res)=>{
+// ✅ TEST ROUTES
+app.get("/", (req, res) => {
   res.send("Backend chal raha hai ✅");
 });
 
-app.get("/ping", (req,res)=>{
+app.get("/ping", (req, res) => {
   res.send("OK");
 });
 
-// 🔥 GAME LAUNCH
-app.get("/start-game", async (req,res)=>{
+// 🔥 START GAME
+app.get("/start-game", async (req, res) => {
+
+  console.log("🎮 START GAME HIT");
 
   const userId = req.query.userId;
   const gameId = req.query.gameId;
 
-  if(!userId || !gameId){
+  console.log("👤 USER:", userId);
+  console.log("🎰 GAME:", gameId);
+
+  if (!userId || !gameId) {
     return res.json({
-      error:"Missing userId or gameId"
+      success: false,
+      error: "Missing userId or gameId"
     });
   }
 
-  try{
+  try {
 
     // 🔥 FIND USER
-    const snapshot = await db.collection("users")
-      .where("email","==",userId)
+    const snapshot = await db
+      .collection("users")
+      .where("email", "==", userId)
+      .limit(1)
       .get();
 
-    if(snapshot.empty){
+    if (snapshot.empty) {
       return res.json({
-        error:"User not found"
+        success: false,
+        error: "User not found"
       });
     }
 
     const doc = snapshot.docs[0];
-    let data = doc.data();
+    const data = doc.data();
 
     let balance = Number(data.balance || 0);
 
-    // 🔥 AUTO USERNAME
-    if(!data.username){
+    // 🔥 SAFE USERNAME
+    let username;
 
-      const autoUsername =
-        data.email.split("@")[0] +
-        Math.floor(1000 + Math.random() * 9000);
+    if (data.username) {
+
+      username = data.username;
+
+    } else {
+
+      username = data.email
+        .split("@")[0]
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .toLowerCase();
 
       await doc.ref.update({
-        username:autoUsername
+        username: username
       });
-
-      data.username = autoUsername;
     }
 
-    const username = data.username;
+    console.log("🧑 USERNAME:", username);
+    console.log("💰 BALANCE:", balance);
 
-    // 🔥 SAVE LIVE STATUS
+    // 🔥 SAVE LIVE USER
     await db.collection("liveUsers")
       .doc(userId)
       .set({
-        email:userId,
-        gameId:gameId,
-        username:username,
-        status:"online",
-        startTime:Date.now()
+        email: userId,
+        username: username,
+        gameId: gameId,
+        status: "online",
+        startTime: Date.now()
       });
 
-    // 🔥 GAME API CALL
+    // 🔥 PROVIDER REQUEST
+    const payload = {
+      member_account: username,
+      game_uid: gameId,
+      api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+      currency_code: "INR",
+      language: "en",
+      platform: 2,
+      home_url: "https://2xwin.online",
+      credit_amount: String(balance),
+      transfer_id: Date.now().toString()
+    };
+
+    console.log("📤 PAYLOAD:");
+    console.log(payload);
+
     const response = await api.post(
 
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
 
-      qs.stringify({
-        member_account: username,
-        game_uid: gameId,
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-        currency_code: "INR",
-        language: "en",
-        platform: 2,
-        home_url: "https://2xwin.online",
-        credit_amount: String(balance),
-        transfer_id: Date.now().toString()
-      }),
+      qs.stringify(payload),
 
       {
-        headers:{
+        headers: {
           "Content-Type":
-          "application/x-www-form-urlencoded"
+            "application/x-www-form-urlencoded"
         }
       }
     );
 
-    console.log("🔥 API RESPONSE:", response.data);
+    console.log("📥 PROVIDER RESPONSE:");
+    console.log(
+      JSON.stringify(response.data, null, 2)
+    );
 
-    const gameUrl = response.data?.game_url;
-
-    if(!gameUrl){
+    // 🔥 SUCCESS CHECK
+    if (
+      !response.data ||
+      !response.data.success ||
+      !response.data.game_url
+    ) {
 
       return res.json({
-        error:"Game URL not received",
+        success: false,
+        error: "Provider failed",
         providerResponse: response.data
       });
     }
 
-    // ✅ REDIRECT GAME
-    return res.redirect(gameUrl);
+    // ✅ SEND URL
+    return res.json({
+      success: true,
+      url: response.data.game_url
+    });
 
-  }catch(e){
+  } catch (e) {
 
-    console.log("❌ ERROR:", e.response?.data || e.message);
+    console.log("❌ START GAME ERROR");
 
-    if(e.code === "ECONNABORTED"){
-      return res.json({
-        error:"Server slow, try again"
-      });
+    if (e.response) {
+      console.log(e.response.data);
+    } else {
+      console.log(e.message);
     }
 
     return res.json({
-      error:"Game server down",
-      details:e.response?.data || e.message
+      success: false,
+      error: "Game launch failed",
+      details: e.response?.data || e.message
     });
   }
 
 });
 
 // 🔥 CALLBACK
-app.post("/callback", async (req,res)=>{
+app.post("/callback", async (req, res) => {
 
+  console.log("🔥 CALLBACK HIT");
   console.log(
     JSON.stringify(req.body, null, 2)
   );
 
-  try{
+  try {
 
     const data = req.body;
 
     const username = data.player_uid;
     const action = data.action;
 
+    if (!username) {
+
+      return res.json({
+        status: false,
+        error: "Missing username"
+      });
+    }
+
+    // 🔥 FIND USER
     const snapshot = await db.collection("users")
-      .where("username","==",username)
+      .where("username", "==", username)
+      .limit(1)
       .get();
 
-    if(snapshot.empty){
+    if (snapshot.empty) {
+
+      console.log("❌ USER NOT FOUND");
+
       return res.json({
-        status:false
+        status: false
       });
     }
 
@@ -179,7 +226,7 @@ app.post("/callback", async (req,res)=>{
     console.log("🔥 ACTION:", action);
 
     // 🔻 BET
-    if(action === "bet"){
+    if (action === "bet") {
 
       const betAmount = Number(
         data.bet_amount ||
@@ -193,7 +240,7 @@ app.post("/callback", async (req,res)=>{
     }
 
     // 🔥 WIN
-    if(action === "win"){
+    if (action === "win") {
 
       const winAmount = Number(
         data.win_amount || 0
@@ -204,59 +251,77 @@ app.post("/callback", async (req,res)=>{
       console.log("✅ WIN:", winAmount);
     }
 
+    // ❌ NEGATIVE FIX
+    if (balance < 0) {
+      balance = 0;
+    }
+
     // 🔥 UPDATE BALANCE
     await doc.ref.update({
       balance: balance
     });
 
-    // 🔻 USER OFFLINE
+    // 🔥 UPDATE LIVE STATUS
     await db.collection("liveUsers")
       .doc(doc.data().email)
-      .update({
-        status:"offline",
-        lastSeen:Date.now()
-      });
+      .set({
+        lastSeen: Date.now(),
+        status: "offline"
+      }, { merge: true });
 
-    res.json({
-      status:true,
-      balance:balance
+    console.log("💰 NEW BALANCE:", balance);
+
+    return res.json({
+      status: true,
+      balance: balance
     });
 
-  }catch(e){
+  } catch (e) {
 
-    console.log(
-      "CALLBACK ERROR:",
-      e.message
-    );
+    console.log("❌ CALLBACK ERROR:");
+    console.log(e.message);
 
-    res.json({
-      status:false
+    return res.json({
+      status: false,
+      error: e.message
     });
   }
 
 });
 
 // 🔥 ADMIN LIVE USERS
-app.get("/admin/live-users", async (req,res)=>{
+app.get("/admin/live-users", async (req, res) => {
 
-  const snapshot =
-    await db.collection("liveUsers").get();
+  try {
 
-  let users = [];
+    const snapshot =
+      await db.collection("liveUsers").get();
 
-  snapshot.forEach(doc=>{
-    users.push(doc.data());
-  });
+    let users = [];
 
-  res.json(users);
+    snapshot.forEach(doc => {
+      users.push(doc.data());
+    });
+
+    return res.json(users);
+
+  } catch (e) {
+
+    return res.json({
+      success: false,
+      error: e.message
+    });
+  }
 
 });
 
 // ✅ SERVER START
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, ()=>{
+app.listen(PORT, () => {
+
   console.log(
     "🚀 Server started on port " + PORT
   );
+
 });
