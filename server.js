@@ -23,7 +23,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ TEST ROUTE
+// ✅ TEST
 app.get("/", (req,res)=>{
   res.send("Backend chal raha hai ✅");
 });
@@ -46,7 +46,7 @@ app.get("/start-game", async (req,res)=>{
 
   try{
 
-    // 🔥 USER FIND
+    // 🔥 FIND USER
     const snapshot = await db.collection("users")
       .where("email","==",userId)
       .get();
@@ -78,7 +78,7 @@ app.get("/start-game", async (req,res)=>{
 
     const username = data.username;
 
-    // 🔥 LIVE USER SAVE
+    // 🔥 SAVE LIVE STATUS
     await db.collection("liveUsers")
       .doc(userId)
       .set({
@@ -89,23 +89,21 @@ app.get("/start-game", async (req,res)=>{
         startTime:Date.now()
       });
 
-    // 🔥 PROVIDER API CALL
+    // 🔥 GAME API CALL
     const response = await api.post(
 
       "https://game.gamblly-api.com/production/v1/gameLaunch.php",
 
       qs.stringify({
-
         member_account: username,
         game_uid: gameId,
-        credit_amount: String(balance),
+        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         currency_code: "INR",
         language: "en",
         platform: 2,
-        api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
         home_url: "https://2xwin.online",
+        credit_amount: String(balance),
         transfer_id: Date.now().toString()
-
       }),
 
       {
@@ -114,11 +112,9 @@ app.get("/start-game", async (req,res)=>{
           "application/x-www-form-urlencoded"
         }
       }
-
     );
 
-    console.log("🔥 PROVIDER RESPONSE:");
-    console.log(response.data);
+    console.log("🔥 API RESPONSE:", response.data);
 
     const gameUrl = response.data?.game_url;
 
@@ -128,24 +124,24 @@ app.get("/start-game", async (req,res)=>{
         error:"Game URL not received",
         providerResponse: response.data
       });
-
     }
 
-    // 🔥 REDIRECT GAME
+    // ✅ REDIRECT GAME
     return res.redirect(gameUrl);
 
   }catch(e){
 
-    console.log("❌ ERROR:");
+    console.log("❌ ERROR:", e.response?.data || e.message);
 
-    if(e.response){
-      console.log(e.response.data);
-    }else{
-      console.log(e.message);
+    if(e.code === "ECONNABORTED"){
+      return res.json({
+        error:"Server slow, try again"
+      });
     }
 
     return res.json({
-      error:"Game launch failed"
+      error:"Game server down",
+      details:e.response?.data || e.message
     });
   }
 
@@ -155,7 +151,7 @@ app.get("/start-game", async (req,res)=>{
 app.post("/callback", async (req,res)=>{
 
   console.log(
-    JSON.stringify(req.body,null,2)
+    JSON.stringify(req.body, null, 2)
   );
 
   try{
@@ -170,18 +166,15 @@ app.post("/callback", async (req,res)=>{
       .get();
 
     if(snapshot.empty){
-
       return res.json({
         status:false
       });
-
     }
 
     const doc = snapshot.docs[0];
 
-    let balance = Number(
-      doc.data().balance || 0
-    );
+    let balance =
+      Number(doc.data().balance || 0);
 
     console.log("🔥 ACTION:", action);
 
@@ -189,7 +182,9 @@ app.post("/callback", async (req,res)=>{
     if(action === "bet"){
 
       const betAmount = Number(
-        data.bet_amount || 0
+        data.bet_amount ||
+        data.amount ||
+        0
       );
 
       balance -= betAmount;
@@ -214,7 +209,7 @@ app.post("/callback", async (req,res)=>{
       balance: balance
     });
 
-    // 🔥 USER OFFLINE
+    // 🔻 USER OFFLINE
     await db.collection("liveUsers")
       .doc(doc.data().email)
       .update({
@@ -222,29 +217,26 @@ app.post("/callback", async (req,res)=>{
         lastSeen:Date.now()
       });
 
-    return res.json({
+    res.json({
       status:true,
       balance:balance
     });
 
   }catch(e){
 
-    console.log("❌ CALLBACK ERROR:");
+    console.log(
+      "CALLBACK ERROR:",
+      e.message
+    );
 
-    if(e.response){
-      console.log(e.response.data);
-    }else{
-      console.log(e.message);
-    }
-
-    return res.json({
+    res.json({
       status:false
     });
   }
 
 });
 
-// 🔥 ADMIN LIVE USERS API
+// 🔥 ADMIN LIVE USERS
 app.get("/admin/live-users", async (req,res)=>{
 
   const snapshot =
