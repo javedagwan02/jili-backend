@@ -144,7 +144,7 @@ app.get("/start-game", async (req, res) => {
 
     const response = await api.post(
 
-      "http://game.gambllyapi.com/production/v1/gameLaunch.php",
+      "https://game.gambllyapi.com/production/v1/gameLaunch.php",
 
       qs.stringify(payload),
 
