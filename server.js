@@ -131,6 +131,8 @@ app.get("/start-game", async (req, res) => {
       home_url:
       "https://2xwin.online",
 
+      callback_url: "https://jili-backend.onrender.com/callback",
+
       credit_amount:
       balance.toFixed(2),
 
@@ -260,6 +262,22 @@ app.post("/callback", async (req, res) => {
       currentBalance
     );
 
+    const action = data.action || "";
+
+if (action === "deposit_required") {
+
+  console.log("💳 DEPOSIT REQUIRED");
+
+  return res.json({
+    status: true,
+    balance: Number(currentBalance.toFixed(2)),
+    data: {
+      balance: Number(currentBalance.toFixed(2))
+    }
+  });
+
+}
+    
     // 🔥 BET AMOUNT
     const betAmount = parseFloat(
 
@@ -331,10 +349,13 @@ app.post("/callback", async (req, res) => {
 
     return res.json({
 
-      status: true,
-      balance: newBalance
+  status: true,
+  balance: newBalance,
+  data: {
+    balance: newBalance
+  }
 
-    });
+});
 
   } catch (e) {
 
