@@ -115,29 +115,17 @@ app.get("/start-game", async (req, res) => {
 
     // 🔥 PROVIDER REQUEST
     const payload = {
-
-      member_account: username,
-      game_uid: gameId,
-
-      api_key:
-      "fecfaa08d7aCodeHub944b04ac2cf59a",
-
-      currency_code: "INR",
-
-      language: "en",
-
-      platform: 2,
-
-      home_url:
-      "https://2xwin.online",
-
-      credit_amount:
-      balance.toFixed(2),
-
-      transfer_id:
-      Date.now().toString()
-
-    };
+  member_account: username,
+  game_uid: gameId,
+  api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
+  currency_code: "INR",
+  language: "en",
+  platform: 2,
+  home_url: "https://2xwin.online",
+  callback_url: "https://jili-backend.onrender.com/callback",
+  credit_amount: balance.toFixed(2),
+  transfer_id: Date.now().toString()
+};
 
     console.log("📤 PAYLOAD:");
     console.log(payload);
@@ -208,9 +196,6 @@ app.get("/start-game", async (req, res) => {
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK HIT");
-  console.log("METHOD:", req.method);
-console.log("BODY:", JSON.stringify(req.body));
-console.log("QUERY:", JSON.stringify(req.query));
   console.log(
     JSON.stringify(req.body, null, 2)
   );
