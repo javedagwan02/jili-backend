@@ -208,6 +208,9 @@ app.get("/start-game", async (req, res) => {
 app.post("/callback", async (req, res) => {
 
   console.log("🔥 CALLBACK HIT");
+  console.log("METHOD:", req.method);
+console.log("BODY:", JSON.stringify(req.body));
+console.log("QUERY:", JSON.stringify(req.query));
   console.log(
     JSON.stringify(req.body, null, 2)
   );
