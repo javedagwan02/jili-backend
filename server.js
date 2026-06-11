@@ -82,7 +82,7 @@ app.get("/start-game", async (req, res) => {
     const payload = {
       member_account: username,
       game_uid: gameId,
-      api_key: API_KEY,
+      api_key: fecfaa08d7aCodeHub944b04ac2cf59a,
       currency_code: "INR",
       language: "en",
       platform: 2,
