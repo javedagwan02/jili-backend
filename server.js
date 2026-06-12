@@ -194,48 +194,56 @@ app.get("/start-game", async (req, res) => {
 // 🔥 CALLBACK
 app.post("/callback", async (req, res) => {
 
+  console.log("================================");
   console.log("🔥 CALLBACK HIT");
-  console.log(
-    JSON.stringify(req.body, null, 2)
-  );
+  console.log("TIME:", new Date().toISOString());
+  console.log("HEADERS:", JSON.stringify(req.headers, null, 2));
+  console.log("BODY:", JSON.stringify(req.body, null, 2));
+  console.log("================================");
 
   try {
 
-    const data = req.body;
 
-    const username =
 
-      data.player_uid ||
+  const data = req.body;
 
-      data.member_account ||
+  const username = String(
+    data.player_uid ||
+    data.member_account ||
+    data.username ||
+    ""
+  ).trim();
 
-      data.username;
+  console.log("👤 USERNAME:", username);
 
-    if (!username) {
+  if (!username) {
 
-      return res.json({
-        status: false,
-        error: "Username missing"
-      });
+    return res.json({
+      status: false,
+      error: "Username missing"
+    });
 
-    }
+  }
 
     // 🔥 FIND USER
     const snapshot = await db.collection("users")
-      .where("username", "==", username)
-      .limit(1)
-      .get();
+  .where("username", "==", username)
+  .limit(1)
+  .get();
 
-    if (snapshot.empty) {
+console.log("📊 MATCHED USERS:", snapshot.size);
 
-      console.log("❌ USER NOT FOUND");
+if (snapshot.empty) {
 
-      return res.json({
-        status: false
-      });
+  console.log("❌ USER NOT FOUND:", username);
 
-    }
+  return res.status(200).json({
+    status: false,
+    balance: 0
+  });
 
+}
+    
     const doc = snapshot.docs[0];
 
     let currentBalance = Number(
@@ -308,20 +316,18 @@ app.post("/callback", async (req, res) => {
 
     // 🔥 UPDATE LIVE STATUS
     await db.collection("liveUsers")
-      .doc(doc.data().email)
-      .set({
+  .doc(doc.data().email)
+  .set({
 
-        lastSeen: Date.now(),
-        status: "offline"
+    lastSeen: Date.now(),
+    status: "offline"
 
-      }, { merge: true });
+  }, { merge: true });
 
-    return res.json({
-
-      status: true,
-      balance: newBalance
-
-    });
+return res.status(200).json({
+  status: true,
+  balance: Number(newBalance)
+});
 
   } catch (e) {
 
