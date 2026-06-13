@@ -120,7 +120,7 @@ app.get("/start-game", async (req, res) => {
   api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
   currency_code: "INR",
   language: "en",
-  platform: 2,
+  platform: 1,
   home_url: "https://2xwin.online",
   credit_amount: balance.toFixed(2),
   transfer_id: Date.now().toString()
@@ -194,56 +194,48 @@ app.get("/start-game", async (req, res) => {
 // 🔥 CALLBACK
 app.post("/callback", async (req, res) => {
 
-  console.log("================================");
   console.log("🔥 CALLBACK HIT");
-  console.log("TIME:", new Date().toISOString());
-  console.log("HEADERS:", JSON.stringify(req.headers, null, 2));
-  console.log("BODY:", JSON.stringify(req.body, null, 2));
-  console.log("================================");
+  console.log(
+    JSON.stringify(req.body, null, 2)
+  );
 
   try {
 
+    const data = req.body;
 
+    const username =
 
-  const data = req.body;
+      data.player_uid ||
 
-  const username = String(
-    data.player_uid ||
-    data.member_account ||
-    data.username ||
-    ""
-  ).trim();
+      data.member_account ||
 
-  console.log("👤 USERNAME:", username);
+      data.username;
 
-  if (!username) {
+    if (!username) {
 
-    return res.json({
-      status: false,
-      error: "Username missing"
-    });
+      return res.json({
+        status: false,
+        error: "Username missing"
+      });
 
-  }
+    }
 
     // 🔥 FIND USER
     const snapshot = await db.collection("users")
-  .where("username", "==", username)
-  .limit(1)
-  .get();
+      .where("username", "==", username)
+      .limit(1)
+      .get();
 
-console.log("📊 MATCHED USERS:", snapshot.size);
+    if (snapshot.empty) {
 
-if (snapshot.empty) {
+      console.log("❌ USER NOT FOUND");
 
-  console.log("❌ USER NOT FOUND:", username);
+      return res.json({
+        status: false
+      });
 
-  return res.status(200).json({
-    status: false,
-    balance: 0
-  });
+    }
 
-}
-    
     const doc = snapshot.docs[0];
 
     let currentBalance = Number(
@@ -316,18 +308,20 @@ if (snapshot.empty) {
 
     // 🔥 UPDATE LIVE STATUS
     await db.collection("liveUsers")
-  .doc(doc.data().email)
-  .set({
+      .doc(doc.data().email)
+      .set({
 
-    lastSeen: Date.now(),
-    status: "offline"
+        lastSeen: Date.now(),
+        status: "offline"
 
-  }, { merge: true });
+      }, { merge: true });
 
-return res.status(200).json({
-  status: true,
-  balance: Number(newBalance)
-});
+    return res.json({
+
+      status: true,
+      balance: newBalance
+
+    });
 
   } catch (e) {
 
@@ -381,3 +375,4 @@ app.listen(PORT, () => {
 
 });
 
+                  
