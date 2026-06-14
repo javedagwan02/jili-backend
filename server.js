@@ -115,16 +115,29 @@ app.get("/start-game", async (req, res) => {
 
     // 🔥 PROVIDER REQUEST
     const payload = {
-  member_account: username,
-  game_uid: gameId,
-  api_key: "fecfaa08d7aCodeHub944b04ac2cf59a",
-  currency_code: "INR",
-  language: "en",
-  platform: 1,
-  home_url: "https://2xwin.online",
-  credit_amount: balance.toFixed(2),
-  transfer_id: Date.now().toString()
-};
+
+      member_account: username,
+      game_uid: gameId,
+
+      api_key:
+      "fecfaa08d7aCodeHub944b04ac2cf59a",
+
+      currency_code: "INR",
+
+      language: "en",
+
+      platform: 2,
+
+      home_url:
+      "https://2xwin.online",
+
+      credit_amount:
+      balance.toFixed(2),
+
+      transfer_id:
+      Date.now().toString()
+
+    };
 
     console.log("📤 PAYLOAD:");
     console.log(payload);
@@ -190,11 +203,26 @@ app.get("/start-game", async (req, res) => {
   }
 
 });
+app.get("/callback", (req, res) => {
+  console.log("✅ CALLBACK GET HIT");
 
-app.all("/callback", (req, res, next) => {
-  console.log("🚨 CALLBACK ROUTE HIT");
+  res.status(200).json({
+    success: true,
+    message: "Callback endpoint active"
+  });
+});
+
+app.all("/callback-test", (req, res) => {
+
+  console.log("🔥 TEST CALLBACK HIT");
   console.log("METHOD:", req.method);
-  next();
+  console.log("BODY:", req.body);
+  console.log("QUERY:", req.query);
+
+  return res.json({
+    success: true
+  });
+
 });
 // 🔥 CALLBACK
 app.post("/callback", async (req, res) => {
@@ -379,5 +407,4 @@ app.listen(PORT, () => {
   );
 
 });
-
-                  
+        
