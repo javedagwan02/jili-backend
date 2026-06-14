@@ -191,6 +191,11 @@ app.get("/start-game", async (req, res) => {
 
 });
 
+app.all("/callback", (req, res, next) => {
+  console.log("🚨 CALLBACK ROUTE HIT");
+  console.log("METHOD:", req.method);
+  next();
+});
 // 🔥 CALLBACK
 app.post("/callback", async (req, res) => {
 
