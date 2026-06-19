@@ -10,28 +10,26 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ================= FIREBASE INIT =================
 admin.initializeApp({
-  credential: admin.credential.cert(require("./firebase-service.json")),
+  credential: admin.credential.cert(
+    JSON.parse(process.env.FIREBASE_KEY)
+  ),
 });
 
 const db = admin.firestore();
 
 // ================= CONFIG =================
 const GAMBLLY_BASE_URL = "https://game.gambllyapi.com/production";
-const API_KEY = process.env.GAMBLLY_API_KEY;   // 👈 your agency_uid
-const API_SUFFIX = process.env.GAMBLLY_SUFFIX; // b24d2
+const API_KEY = process.env.GAMBLLY_API_KEY;
+const API_SUFFIX = process.env.GAMBLLY_SUFFIX;
 const CURRENCY = "INR";
 
 // ================= HELPERS =================
-
-// get user from firestore
 async function getUser(uid) {
-  const ref = db.collection("users").doc(uid);
-  const doc = await ref.get();
+  const doc = await db.collection("users").doc(uid).get();
   if (!doc.exists) throw new Error("User not found");
   return { id: doc.id, ...doc.data() };
 }
 
-// update balance
 async function updateBalance(uid, amount) {
   const ref = db.collection("users").doc(uid);
 
@@ -50,7 +48,6 @@ async function updateBalance(uid, amount) {
 }
 
 // ================= GAME LAUNCH =================
-
 app.post("/api/game/launch", async (req, res) => {
   try {
     const { uid, game_uid, home_url, platform, language } = req.body;
@@ -65,7 +62,7 @@ app.post("/api/game/launch", async (req, res) => {
       language: language || "en",
       platform: platform || 1,
       api_key: API_KEY,
-      home_url: home_url,
+      home_url,
       transfer_id: Date.now().toString(),
     });
 
@@ -75,62 +72,31 @@ app.post("/api/game/launch", async (req, res) => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 
-    return res.json(response.data);
+    res.json(response.data);
   } catch (err) {
-    console.error(err.message);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// ================= CALLBACK (IMPORTANT) =================
-// Gamblly will call this on BET / WIN / REFUND
-
+// ================= CALLBACK =================
 app.post("/api/game/callback", async (req, res) => {
   try {
-    const {
-      player_id,
-      bet_amount,
-      win_amount,
-      action,
-      game_uid,
-      txn_id,
-      currency_code,
-    } = req.body;
+    const { player_id, bet_amount, win_amount, action } = req.body;
 
-    console.log("Callback received:", req.body);
+    let change = 0;
 
-    let balanceChange = 0;
+    if (action === "bet") change = -Number(bet_amount || 0);
+    if (action === "win") change = Number(win_amount || 0);
+    if (action === "refund") change = Number(bet_amount || 0);
 
-    // BET = deduct
-    if (action === "bet") {
-      balanceChange = -Number(bet_amount || 0);
-    }
+    const balance = await updateBalance(player_id, change);
 
-    // WIN = add
-    if (action === "win") {
-      balanceChange = Number(win_amount || 0);
-    }
-
-    // REFUND
-    if (action === "refund") {
-      balanceChange = Number(bet_amount || 0);
-    }
-
-    const newBalance = await updateBalance(player_id, balanceChange);
-
-    return res.json({
-      balance: newBalance,
-      status: true,
-    });
+    res.json({ status: true, balance });
   } catch (err) {
-    console.error(err.message);
     res.status(500).json({ status: false, message: err.message });
   }
 });
 
 // ================= SERVER =================
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log("Server running on", PORT));
